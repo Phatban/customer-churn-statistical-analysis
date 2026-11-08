@@ -1,0 +1,2230 @@
+---
+title: "PHÂN TÍCH VÀ DỰ ĐOÁN KHÁCH HÀNG RỜI BỎ DỊCH VỤ"
+subtitle: "Customer Churn · Phân tích dữ liệu · Hồi quy Logistic"
+author: "Nguyễn Tấn Phát"
+output:
+  html_document:
+    theme: flatly
+    highlight: tango
+    toc: true
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
+    toc_depth: 2
+    number_sections: true
+    code_folding: hide
+    fig_caption: true
+    df_print: paged
+    self_contained: true
+lang: vi
+---
+
+<style>
+body {font-family:"Segoe UI",Arial,sans-serif; color:#293d39; line-height:1.72; font-size:15.5px; background:#fff;}
+.main-container {max-width:1250px;}
+h1,h2,h3 {font-weight:650;}
+h1.title {font-size:32px; border-bottom:2px solid #2a9d8f; padding-bottom:15px;}
+h1 {color:#264653; font-size:26px; margin-top:34px; border-bottom:2px solid #2a9d8f; padding-bottom:12px;}
+h2 {color:#287f80; font-size:21px; margin-top:27px; border-left:3px solid #83beb4; padding-left:12px;}
+h3 {color:#287f80; font-size:18px;}
+.subtitle {color:#287f80; font-size:20px;} .author,.date {color:#64838a;}
+pre {border:1px solid #dcebe5; background:#f6faf8; border-radius:7px; font-size:12px;}
+.table {font-size:13.5px; margin:18px 0 25px;}
+.table thead th {background:#287f80; color:white; padding:11px; border-color:#287f80;}
+.table td {vertical-align:middle; border-color:#e1eee8; overflow-wrap:anywhere; padding:8px 10px;}
+.table-striped > tbody > tr:nth-of-type(odd) {background:#f1f8f5;}
+/* Xen kẽ màu cho mọi bảng số liệu Bootstrap/kableExtra, kể cả khi thiếu class striped. */
+.main-container .section table.table > tbody > tr:nth-of-type(odd) > td {background-color:#ffffff !important;}
+.main-container .section table.table > tbody > tr:nth-of-type(even) > td {background-color:#edf5f2 !important;}
+.main-container .section table.table > tbody > tr.group_header > td,
+.main-container .section table.table > tbody > tr.group_header > th {
+  background-color:#dfeee9 !important; color:#245d56; font-weight:700;
+}
+.main-container .section table.descriptive-table > tbody > tr > td:nth-child(7) {
+  background-color:#deeee8 !important; font-weight:700;
+}
+/* Chỉ hai cấp tiêu đề trong TOC; cấp ba không hiện số tự động. */
+.main-container h3 .header-section-number {display:none;}
+caption {color:#4b756b; font-weight:600;}
+.note {background:#edf8f2; border-left:3px solid #4cae9f; padding:16px 20px; margin:20px 0; border-radius:4px;}
+.caution {background:#fffaf1; border-left:3px solid #c9aa6d; padding:16px 20px; margin:20px 0; border-radius:4px;}
+#TOC {font-size:13px; background:#f4f9f8; border:1px solid #d7e8e4; border-radius:10px; padding:8px;}
+.tocify .list-group-item.active,.tocify .list-group-item.active:hover,
+.tocify .list-group-item.active:focus {color:white; background:#287f80; border-radius:5px;}
+.tocify .list-group-item:hover {background:#e8f4ee; color:#206d60;}
+a {color:#287f80;} a:hover {color:#196a5e;}
+@media print {#TOC,.code-folding-btn {display:none;} .main-container {max-width:100%;}}
+.pca-table strong {color:#126a60;}
+.pca-details {margin:16px 0 22px; padding:12px 16px; border:1px solid #dcebe5; border-radius:8px; background:#f7fbf9;}
+.pca-details summary {font-weight:600; cursor:pointer; color:#246e67;}
+.pca-details table {max-width:100%;}
+
+/* Bảng đứng riêng căn giữa; bảng có nhận xét bên phải vẫn căn trái. */
+.main-container .section table.table,
+.main-container .section > table {
+  width:max-content !important; max-width:100%; min-width:290px;
+  margin-left:auto !important; margin-right:auto !important;
+  table-layout:auto;
+}
+.main-container .table td,.main-container .table th {overflow-wrap:normal; word-break:normal;}
+.table-responsive {border:0; overflow-x:auto;}
+/* Import Data: đúng một bảng rộng, chỉ kéo thanh cuộn ngang (không phân trang cột). */
+.data-preview-scroll {width:100%; max-width:100%; overflow-x:auto; overflow-y:hidden;
+  border:1px solid #dbeae6; border-radius:7px; margin:14px auto 24px;}
+.main-container .section .data-preview-scroll table.data-preview-table {
+  width:max-content !important; min-width:1650px !important; max-width:none !important;
+  margin:0 !important; white-space:nowrap; font-size:12px;
+}
+.data-preview-table th,.data-preview-table td {white-space:nowrap !important;
+  padding:10px 13px !important; overflow-wrap:normal !important;}
+.data-preview-table td:last-child {font-weight:700; color:#166b60;}
+/* Bảng từ điển 3 cột; thống kê mô tả ưu tiên khoảng trống cho từng chỉ số. */
+/* Bảng phân nhóm: các nhóm có nhãn riêng, tránh lặp biến và cột Churn. */
+.main-container .section table.categorical-summary-table {
+  min-width:570px; max-width:100%; margin:18px auto 25px !important;
+}
+.categorical-summary-table th,.categorical-summary-table td {padding:9px 16px !important;}
+.categorical-summary-table td:last-child {font-weight:700; color:#166d62;}
+.main-container .section table.dictionary-table {width:94% !important; min-width:0;}
+.dictionary-table td:last-child {line-height:1.65;}
+.main-container .section table.descriptive-table {width:98% !important; min-width:900px;
+  margin:20px auto 28px !important;}
+.descriptive-table th,.descriptive-table td {padding:13px 16px !important;
+  white-space:nowrap !important; text-align:center;}
+.descriptive-table td:first-child,.descriptive-table th:first-child {min-width:165px; text-align:left;}
+.descriptive-table td:nth-child(7) {font-weight:700; color:#146d63; background:#edf7f2;}
+.main-container .section table.model-prep-table,
+.main-container .section table.train-test-table {min-width:410px; margin:16px auto 22px !important;}
+.model-prep-table th,.model-prep-table td,
+.train-test-table th,.train-test-table td {padding:11px 20px !important;}
+/* Bảng nhỏ + nhận xét: hai cột, nhận xét cân giữa theo chiều cao thực của bảng. */
+.compact-analysis {display:flex; align-items:center; gap:26px; margin:18px 0 27px;}
+.compact-table-wrap {flex:0 1 auto; min-width:0; max-width:60%;}
+.main-container .section .compact-table-wrap table {
+  width:max-content !important; min-width:290px; max-width:100%;
+  margin:6px 0 12px !important; font-size:13px;}
+.compact-table-wrap th,.compact-table-wrap td {padding:9px 12px !important;
+  white-space:normal; overflow-wrap:normal !important;}
+.compact-interpretation {flex:1 1 300px; align-self:center; min-width:280px;
+  background:#f2f9f6; border-left:3px solid #45a99b;
+  padding:14px 18px; border-radius:6px; line-height:1.65;}
+.compact-interpretation p {margin:6px 0 10px;}
+.compact-interpretation ul {padding-left:21px; margin:6px 0;}
+.compact-interpretation li {margin-bottom:6px;}
+.wide-analysis {margin:18px 0 28px;}
+.main-container .section .wide-analysis .wide-table-wrap table {
+  width:max-content !important; max-width:100%; margin:8px auto 16px !important;}
+.wide-analysis .compact-interpretation {margin:12px auto 0; max-width:930px;}
+.metrics-panel .compact-table-wrap {max-width:68%;}
+.metrics-panel .table th,.metrics-panel .table td {white-space:nowrap !important;
+  padding:8px 12px !important;}
+.metrics-panel .table td:first-child {font-weight:600;}
+/* Ba ma trận nhầm lẫn luôn cùng một hàng; màn hình nhỏ cuộn cả cụm. */
+.cm-gallery {max-width:100%; overflow-x:auto; margin:18px auto 23px;}
+.cm-grid {display:grid; grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:11px; align-items:stretch; min-width:845px; width:100%;}
+.cm-card {border:1px solid #dcebe7; border-radius:9px;
+  padding:12px 9px; background:#fafdfc; min-width:0;}
+.cm-card h4 {margin:0 0 7px; color:#277f7b; font-size:16px; font-weight:700;}
+.cm-card .cm-threshold {font-size:12px; color:#55716d; margin-bottom:12px;}
+.cm-card table {border-collapse:collapse; width:100%; table-layout:fixed; font-size:12px;}
+.cm-card th,.cm-card td {border:1px solid #dcebe7;
+  padding:9px 4px !important; text-align:center; white-space:normal;}
+.cm-card th:first-child {width:43%;}
+.cm-card th {background:#e4f5f0; color:#244e4b; font-weight:600;}
+.cm-card td:first-child {text-align:left; font-weight:600;}
+.cm-card .cm-correct {background:#eaf9f1; font-weight:700;}
+.cm-card .cm-error {background:#fff1e9; font-weight:700;}
+@media (max-width:1150px) {.compact-analysis {display:block;}
+  .compact-table-wrap,.metrics-panel .compact-table-wrap {max-width:100%;}
+  .compact-interpretation {margin-top:12px;}}
+@media print {.compact-analysis {display:block;} .compact-interpretation {margin-top:10px;}
+  .cm-gallery {overflow:visible;} .cm-grid {min-width:0;}}
+/* Đoạn tóm tắt được tạo từ đối tượng R sau khi phân tích hoàn tất. */
+.executive-summary {padding:16px 20px; border:1px solid #d6e9e4;
+  background:#f6fbf9; border-radius:9px; margin:20px 0 28px;}
+.executive-summary p {margin:8px 0;}
+.executive-summary ul {padding-left:23px; margin:8px 0;}
+.model-warning {border-left:3px solid #ba9454; padding:12px 18px;
+  background:#fffaf1; margin:16px 0;}
+.main-container .section table th {line-height:1.45;}
+.main-container .section table td {line-height:1.55;}
+@media(max-width:800px) {
+  body {font-size:15px;}
+  .main-container {padding:0 14px;}
+  .descriptive-table {min-width:800px;}
+  .table-responsive {overflow-x:auto;}
+  .executive-summary {padding:12px 14px;}
+}
+</style>
+
+
+```{r setup, include=FALSE}
+required_packages <- c(
+  "tidyverse", "janitor", "knitr", "kableExtra", "scales",
+  "patchwork", "boot", "broom", "car", "pROC"
+)
+missing_packages <- required_packages[
+  !vapply(required_packages, requireNamespace, logical(1), quietly = TRUE)
+]
+if (length(missing_packages)) {
+  stop("Cần cài package trước khi Knit: install.packages(c(",
+       paste(sprintf('"%s"', missing_packages), collapse = ", "), "))")
+}
+# Chỉ attach những gói cần dùng cú pháp ngắn; các gói khác gọi bằng ::.
+# Cách này giảm nguy cơ xung đột hàm select/filter/recode.
+invisible(lapply(c("tidyverse", "patchwork"), library, character.only = TRUE))
+
+knitr::opts_chunk$set(
+  echo = TRUE, message = FALSE, warning = FALSE,
+  fig.width = 9, fig.height = 5.2, dpi = 150,
+  fig.align = "center", out.width = "100%", collapse = TRUE,
+  fig.path = "figures/"
+)
+options(width = 100, scipen = 7, dplyr.summarise.inform = FALSE)
+analysis_seed <- 2026L
+# Thay nội dung tóm tắt ở đầu SAU khi knit xong toàn bộ tính toán.
+# Không tính test ở phần đầu, không làm rò rỉ quyết định chọn mô hình.
+knitr::knit_hooks$set(document = function(x) {
+  marker <- "EXECUTIVE_SUMMARY_DYNAMIC_PLACEHOLDER"
+  e <- knitr::knit_global()
+  if (!exists("executive_summary_html", envir = e, inherits = TRUE)) {
+    stop("Chưa tạo được Executive Summary từ kết quả phân tích")
+  }
+  sub(marker, get("executive_summary_html", envir = e), x, fixed = TRUE)
+})
+num <- function(x, digits = 3) {
+  ifelse(is.na(x), "—", formatC(x, format = "f", digits = digits,
+       big.mark = ".", decimal.mark = ","))
+}
+tab <- function(x, caption = NULL, digits = 3) {
+  y <- as.data.frame(x, check.names = FALSE, stringsAsFactors = FALSE)
+  for (j in seq_along(y)) {
+    if (is.numeric(y[[j]])) y[[j]] <- num(y[[j]], digits)
+  }
+  knitr::kable(y, format = "html", caption = caption, row.names = FALSE,
+    escape = TRUE, table.attr = 'class="table table-striped pca-table"')
+}
+
+# Bảng nhỏ và nhận xét đặt cạnh nhau; bảng nhiều cột được giữ nguyên và nhận xét nằm dưới.
+render_analysis <- function(tables, captions, note_html, digits = 3, metrics = FALSE) {
+  if (is.data.frame(tables)) tables <- list(tables)
+  if (length(captions) != length(tables)) stop("Mỗi bảng cần một caption")
+  wide <- any(vapply(tables, ncol, integer(1)) >= 5L)
+  html <- paste(vapply(seq_along(tables), function(i) {
+    t <- tables[[i]]
+    k <- knitr::kable(t, format = "html", caption = captions[i],
+      digits = digits, row.names = FALSE, escape = TRUE,
+      table.attr = 'class="table table-striped pca-table"')
+    if ("Metric" %in% names(t)) {
+      important <- grep(paste(c("Churn Rate", "Fully Duplicated Rows",
+        "Repeated rows removed", "Observations after deduplication",
+        "Sensitivity", "ROC-AUC", "Average Precision",
+        "False Positives", "False Negatives", "True Positives"), collapse = "|"),
+        as.character(t$Metric))
+      if (length(important)) k <- kableExtra::row_spec(k, important, bold = TRUE)
+    }
+    as.character(k)
+  }, character(1)), collapse = "\n")
+  class_name <- if (wide) "wide-analysis" else if (metrics) "compact-analysis metrics-panel" else "compact-analysis"
+  table_class <- if (wide) "wide-table-wrap" else "compact-table-wrap"
+  cat(sprintf('<div class="%s"><div class="%s">%s</div><div class="compact-interpretation">%s</div></div>\n',
+    class_name, table_class, html, note_html))
+}
+compact_table_with_note <- function(x, caption, note_html, digits = 3) {
+  render_analysis(x, caption, note_html, digits)
+}
+
+# Bảng chỉ số dọc: số liệu nằm trong ô riêng, không xuống dòng.
+transpose_model_metrics <- function(df, metrics) {
+  out <- data.frame(Metric = names(metrics), check.names = FALSE)
+  for (i in seq_len(nrow(df))) {
+    out[[as.character(df$model[i])]] <- vapply(
+      unname(metrics), function(key) {
+        value <- as.numeric(df[[key]][i])
+        if (!is.finite(value)) return("—")
+        if (key %in% c("tn", "fp", "fn", "tp")) {
+          return(formatC(value, format = "f", digits = 0))
+        }
+        if (key == "aic_train") return(formatC(value, format = "f", digits = 1))
+        formatC(value, format = "f", digits = 3)
+      }, character(1)
+    )
+  }
+  out
+}
+
+chart_colors <- list(
+  teal = "#3BAFA4", blue = "#4BA9D2", coral = "#E47D68",
+  gold = "#DCB054", ink = "#264653", gray = "#94ADB1", grid = "#E8F2EF"
+)
+churn_colors <- c("No churn" = "#43B6A7", "Churn" = "#EF886F")
+plot_theme <- theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold", colour = chart_colors$ink),
+    plot.subtitle = element_text(colour = "#587871"),
+    panel.grid.major = element_line(colour = chart_colors$grid),
+    panel.grid.minor = element_blank(),
+    axis.text = element_text(colour = "#435C56"),
+    axis.title = element_text(colour = chart_colors$ink),
+    legend.position = "bottom", legend.title = element_blank(),
+    plot.title.position = "plot",
+    plot.margin = margin(10, 12, 10, 12),
+    strip.text = element_text(face = "bold", colour = chart_colors$ink),
+    strip.background = element_rect(fill = "#EEF5F2", color = NA)
+  )
+theme_set(plot_theme)
+
+
+segment_churn_rate <- function(variable, level) {
+  idx <- !is.na(data[[variable]]) & as.character(data[[variable]]) == level
+  if (!any(idx)) return(NA_real_)
+  mean(as.character(data$churn[idx]) == "Churn", na.rm = TRUE)
+}
+set.seed(analysis_seed)
+```
+
+
+<div class="note">
+<p><strong>Người thực hiện:</strong> Nguyễn Tấn Phát</p>
+<p><strong>Học phần:</strong> Xử lý số liệu thống kê (2026)</p>
+<p><strong>Đề tài:</strong> Phân tích churn bằng Bootstrap, Permutation Test và Logistic Regression.</p>
+<p><strong>Dữ liệu:</strong> Iranian Churn (UCI, 2020), <a href="https://doi.org/10.24432/C5JW3Z">DOI: 10.24432/C5JW3Z</a>.</p>
+</div>
+
+# Tóm tắt điều hành (Executive Summary) {.unnumbered}
+
+<div class="executive-summary" id="executive-summary">
+EXECUTIVE_SUMMARY_DYNAMIC_PLACEHOLDER
+</div>
+
+# Bối cảnh và mục tiêu
+
+## Bài toán và phạm vi
+
+Bài phân tích tìm các đặc điểm gắn với **churn** và dùng Logistic Regression để xếp hạng khách hàng theo nguy cơ rời bỏ dịch vụ.
+
+Theo [UCI](https://archive.ics.uci.edu/dataset/563/iranian+churn+dataset), các biến đầu vào thuộc **9 tháng đầu**, còn churn được xác định ở cuối **tháng 12**. Chưa rõ `status` được cập nhật khi nào, nên cần thận trọng với mô hình sử dụng biến này.
+
+## Câu hỏi phân tích
+
+- **Khách hàng nào dễ churn hơn?** Xét khiếu nại, gói cước, `customer_value` và `frequency_of_use`.
+- **Dự báo tốt đến đâu?** So sánh ba mô hình Logistic trên train và test.
+- **Liên hệ ai trước?** Nếu chỉ tiếp cận 10–30% khách hàng, ta tìm được bao nhiêu trường hợp churn?
+
+## Quy trình phân tích
+
+Sau EDA, ta dùng **Bootstrap** và **Permutation Test** cho bốn so sánh, rồi kiểm tra kết quả trước và sau loại trùng. Dữ liệu được chia **80% train – 20% test**; mô hình và ngưỡng được chọn bằng **5-fold CV trên train**. Test chỉ dùng để đánh giá cuối.
+
+# Dữ liệu và tiền xử lý
+
+## Nguồn và dữ liệu đầu vào
+
+```{r read-data, results='asis'}
+data_candidates <- c(
+  file.path("data", "Customer Churn.csv"),
+  file.path("..", "data", "Customer Churn.csv"),
+  "Customer Churn.csv"
+)
+data_available <- data_candidates[file.exists(data_candidates)]
+if (length(data_available) == 0) {
+  stop("Không tìm thấy Customer Churn.csv. Hãy đặt CSV vào thư mục data/ ",
+       "ở thư mục đang Knit hoặc thư mục cha.")
+}
+data_path <- data_available[1]
+raw_data <- readr::read_csv(
+  data_path,
+  show_col_types = FALSE
+)
+
+data <- raw_data |>
+  janitor::clean_names()
+
+cat("<p><strong>Kích thước dữ liệu gốc:</strong> ", nrow(raw_data),
+    " dòng × ", ncol(raw_data), " cột.</p>\n", sep = "")
+preview <- knitr::kable(utils::head(raw_data, 6), format = "html",
+  row.names = FALSE, digits = 2,
+  table.attr = 'class="table table-striped pca-table data-preview-table"')
+cat('<div class="data-preview-scroll">', as.character(preview), '</div>\n', sep = "\n")
+```
+
+[Iranian Churn — UCI](https://archive.ics.uci.edu/dataset/563/iranian+churn+dataset) (2020, CC BY 4.0) gồm **13 biến giải thích và biến đích `churn`**.
+
+## Từ điển biến
+
+Các biến và cách mã hóa trong CSV:
+
+```{r variable-dictionary}
+variable_dictionary <- tibble::tibble(
+  Variable = c(
+    "call_failure", "complains", "subscription_length", "charge_amount",
+    "seconds_of_use", "frequency_of_use", "frequency_of_sms",
+    "distinct_called_numbers", "age_group", "tariff_plan", "status",
+    "age", "customer_value", "churn"
+  ),
+  `Statistical type` = c(
+    "Định lượng rời rạc", "Định tính nhị phân", "Định lượng rời rạc",
+    "Thứ bậc", "Định lượng rời rạc", "Định lượng rời rạc",
+    "Định lượng rời rạc", "Định lượng rời rạc", "Thứ bậc",
+    "Định tính nhị phân", "Định tính nhị phân", "Định lượng rời rạc",
+    "Định lượng liên tục", "Định tính nhị phân (biến đích)"
+  ),
+  `Meaning / Coding` = c(
+    "Số lần cuộc gọi thất bại.",
+    "Có khiếu nại: 0 = Không; 1 = Có.",
+    "Thời gian đã đăng ký dịch vụ, tính bằng tháng.",
+    "Mức tiền cước được mã hóa theo thứ tự tăng dần; không phải số tiền thực.",
+    "Tổng số giây gọi điện.",
+    "Tổng số lần gọi.",
+    "Tổng số tin nhắn SMS.",
+    "Số điện thoại khác nhau mà khách hàng đã gọi.",
+    "Nhóm tuổi theo thứ tự 1 (trẻ hơn) đến 5 (lớn tuổi hơn).",
+    "Loại gói cước: 1 = Trả theo sử dụng; 2 = Hợp đồng.",
+    "Trạng thái thuê bao: 1 = Đang hoạt động; 2 = Không hoạt động.",
+    "Tuổi khách hàng, tính bằng năm.",
+    "Giá trị khách hàng đã được tính sẵn trong bộ dữ liệu; nguồn không nêu đơn vị.",
+    "Trạng thái rời bỏ: 0 = Không churn; 1 = Churn."
+  )
+)
+
+knitr::kable(
+  variable_dictionary,
+  caption = "Variable Dictionary — Iranian Churn",
+  escape = TRUE,
+  table.attr = 'class="table table-striped pca-table dictionary-table"'
+) |>
+  kableExtra::kable_styling(
+    bootstrap_options = c("striped", "hover"),
+    full_width = FALSE,
+    font_size = 12
+  ) |>
+  kableExtra::column_spec(3, width = "34em")
+```
+
+`charge_amount` có **`r sum(dplyr::distinct(data)$charge_amount == 10, na.rm = TRUE)` hồ sơ mang mã 10** sau loại trùng, trong khi UCI ghi thang 0–9. Vì vậy, ta chỉ xem biến này là **mức cước có thứ tự**, không coi là số tiền.
+
+## Chất lượng dữ liệu
+
+```{r initial-quality-report, results='asis'}
+quality_report <- tibble(
+  Metric = c("Number of Observations", "Number of Variables", "Total Data Cells",
+    "Missing Cells", "Missing Cell Rate", "Fully Duplicated Rows",
+    "Churned Customers", "Churn Rate"),
+  Value = c(nrow(data), ncol(data), nrow(data) * ncol(data),
+    sum(is.na(data)), scales::percent(mean(is.na(data)), accuracy = 0.01),
+    sum(duplicated(data)), sum(data$churn == 1, na.rm = TRUE),
+    scales::percent(mean(data$churn == 1, na.rm = TRUE), accuracy = 0.01))
+)
+compact_table_with_note(quality_report, "Data Quality Summary", paste0(
+  "<strong>Nhận xét</strong><ul>",
+  "<li>Dữ liệu gốc có <b>", scales::comma(nrow(data)), " hồ sơ</b> và <b>", ncol(data), " biến</b>; có <b>", sum(is.na(data)), " ô thiếu.</b></li>",
+  "<li>Có <b>", sum(duplicated(data)), " dòng trùng hoàn toàn</b>, sẽ loại trước khi chia train/test.</li>",
+  "<li>Ghi nhận <b>", sum(data$churn == 1), " hồ sơ churn</b> (",
+  scales::percent(mean(data$churn == 1), accuracy = 0.01), ").</li>",
+  "</ul>"))
+```
+Bảng trên là **dữ liệu gốc**, trước khi loại trùng.
+
+
+```{r convert-essential-types, include=FALSE}
+data <- data |>
+  mutate(
+    complains = factor(
+      complains,
+      levels = c(0, 1),
+      labels = c("No complaint", "Complaint")
+    ),
+    tariff_plan = factor(
+      tariff_plan,
+      levels = sort(unique(tariff_plan)),
+      labels = paste0(
+        "Plan ",
+        sort(unique(tariff_plan))
+      )
+    ),
+    status = factor(
+      status,
+      levels = sort(unique(status)),
+      labels = paste0(
+        "Status ",
+        sort(unique(status))
+      )
+    ),
+    age_group = factor(
+      age_group,
+      levels = sort(unique(age_group)),
+      labels = paste0(
+        "Age group ",
+        sort(unique(age_group))
+      ),
+      ordered = TRUE
+    ),
+    churn = factor(
+      churn,
+      levels = c(0, 1),
+      labels = c("No churn", "Churn")
+    )
+  )
+```
+
+
+
+```{r missingness-overview, results='asis'}
+missing_profile <- tibble::tibble(
+  Variable = names(raw_data),
+  Missing = vapply(raw_data, function(x) sum(is.na(x)), integer(1)),
+  `Missing rate` = vapply(raw_data, function(x) mean(is.na(x)), numeric(1))
+)
+missing_profile <- dplyr::mutate(missing_profile,
+  `Missing rate` = scales::percent(`Missing rate`, accuracy = .01))
+if (any(missing_profile$Missing > 0L)) {
+  cat(as.character(tab(dplyr::filter(missing_profile, Missing > 0L),
+                            "Biến có giá trị thiếu")))
+} else {
+  cat("<p><strong>Kết quả:</strong> Cả ", ncol(raw_data),
+      " biến đều có <strong>0 giá trị thiếu</strong> trong file gốc.</p>")
+}
+cat('<details class="pca-details"><summary>Xem mức thiếu theo từng biến</summary>')
+cat(as.character(tab(missing_profile, "Missingness by Variable", digits = 0)))
+cat('</details>')
+```
+
+## Hồ sơ trùng và mức độ thiếu dữ liệu
+
+```{r duplicate-check, results='asis'}
+duplicate_groups <- data |>
+  count(across(everything()), name = "Frequency") |>
+  filter(Frequency > 1) |>
+  arrange(desc(Frequency))
+
+n_before_dedup <- nrow(data)
+duplicate_count <- sum(duplicated(data))
+churn_rate_before_dedup <- mean(data$churn == "Churn")
+data_before_dedup <- data # Giữ toàn bộ 3.150 dòng để kiểm tra độ nhạy.
+
+data <- data |>
+  distinct()
+
+n_after_dedup <- nrow(data)
+
+duplicate_summary <- tibble(
+  Metric = c(
+    "Observations before deduplication",
+    "Duplicate groups",
+    "Repeated rows removed",
+    "Observations after deduplication"
+  ),
+  Value = c(
+    n_before_dedup,
+    nrow(duplicate_groups),
+    duplicate_count,
+    n_after_dedup
+  )
+)
+
+compact_table_with_note(duplicate_summary, "Duplicate Removal Summary", paste0(
+  "<strong>Nhận xét</strong><ul>",
+  "<li>Loại <b>", duplicate_count, " dòng trùng toàn bộ 14 trường</b>; còn <b>",
+  scales::comma(n_after_dedup), " hồ sơ</b>.</li>",
+  "<li>Tỷ lệ churn thay đổi từ <b>",
+  scales::percent(churn_rate_before_dedup, accuracy = 0.01), "</b> lên <b>",
+  scales::percent(mean(data$churn == "Churn"), accuracy = 0.01),
+  "</b> (", num(100 * (mean(data$churn == "Churn") - churn_rate_before_dedup), 2), " điểm phần trăm).</li>",
+  "</ul>"))
+```
+
+Các dòng trùng **cả 14 trường** được giữ lại một bản. Dữ liệu không có mã khách hàng nên chưa biết các dòng giống nhau có thực sự thuộc cùng người hay không.
+
+## Giá trị bất thường
+
+```{r outlier-summary}
+continuous_vars <- c(
+  "call_failure",
+  "subscription_length",
+  "seconds_of_use",
+  "frequency_of_use",
+  "frequency_of_sms",
+  "distinct_called_numbers",
+  "customer_value"
+)
+
+iqr_outlier_summary <- map_dfr(
+  continuous_vars,
+  function(var_name) {
+    x <- data[[var_name]]
+    q1 <- quantile(x, 0.25, na.rm = TRUE)
+    q3 <- quantile(x, 0.75, na.rm = TRUE)
+    iqr_value <- IQR(x, na.rm = TRUE)
+    lower <- q1 - 1.5 * iqr_value
+    upper <- q3 + 1.5 * iqr_value
+
+    tibble(
+      Variable = var_name,
+      Q1 = q1,
+      Q3 = q3,
+      IQR = iqr_value,
+      Lower_bound = lower,
+      Upper_bound = upper,
+      Outlier_count = sum(x < lower | x > upper, na.rm = TRUE),
+      Outlier_rate = mean(x < lower | x > upper, na.rm = TRUE)
+    )
+  }
+)
+
+knitr::kable(
+  iqr_outlier_summary,
+  digits = 3,
+  caption = "Outlier Detection Using the IQR Rule"
+) |>
+  kableExtra::kable_styling(
+    bootstrap_options = c("striped", "hover"),
+    full_width = FALSE
+  )
+```
+
+```{r outlier-boxplots, fig.height=8}
+data |>
+  dplyr::select(all_of(continuous_vars), churn) |>
+  pivot_longer(
+    cols = -churn,
+    names_to = "Variable",
+    values_to = "Value"
+  ) |>
+  ggplot(aes(x = churn, y = Value, fill = churn)) +
+  geom_boxplot(alpha = 0.82, outlier.alpha = 0.28,
+               outlier.size = 0.8, width = 0.65) +
+  scale_fill_manual(values = churn_colors, drop = FALSE) +
+  facet_wrap(~ Variable, scales = "free_y", ncol = 3) +
+  labs(
+    title = "Phân bố các biến số theo trạng thái churn",
+    x = NULL,
+    y = "Giá trị"
+  ) +
+  guides(fill = "none")
+```
+
+Biến có tỷ lệ vượt ngưỡng IQR cao nhất là **`r iqr_outlier_summary$Variable[which.max(iqr_outlier_summary$Outlier_rate)]`** (**`r scales::percent(max(iqr_outlier_summary$Outlier_rate), accuracy = .1)`**). Chưa có dấu hiệu lỗi nhập liệu, nên ta **không xóa các giá trị này**.
+
+# Khám phá churn và bằng chứng thống kê
+
+## Tỷ lệ khách hàng rời bỏ
+
+```{r churn-distribution, results='asis', fig.width=6.7, fig.height=4.4, out.width="68%"}
+churn_summary <- data |>
+  count(churn) |>
+  mutate(
+    Proportion = n / sum(n)
+  )
+
+compact_table_with_note(churn_summary, "Churn Distribution", paste0(
+  "<strong>Nhận xét</strong><ul>",
+  "<li>Nhóm churn: <b>", sum(data$churn == "Churn"), " / ", nrow(data),
+  " khách hàng</b> (", scales::percent(mean(data$churn == "Churn"), accuracy = 0.01), ").</li>",
+  "<li>Nếu luôn dự đoán No churn, Accuracy đạt ",
+  scales::percent(mean(data$churn == "No churn"), accuracy = 0.1),
+  " nhưng Sensitivity bằng 0. Vì vậy cần theo dõi cả tỷ lệ phát hiện churn và cảnh báo sai.</li>",
+  "</ul>"))
+
+ggplot(churn_summary, aes(x = churn, y = n, fill = churn)) +
+  geom_col(width = 0.45, color = "white", linewidth = 0.4) +
+  scale_fill_manual(values = churn_colors, drop = FALSE) +
+  geom_text(
+    aes(
+      label = paste0(
+        scales::comma(n),
+        "\n(",
+        scales::percent(Proportion, accuracy = 0.1),
+        ")"
+      )
+    ),
+    vjust = -0.25,
+    fontface = "bold"
+  ) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.15))) +
+  scale_x_discrete(expand = expansion(add = 0.75)) +
+  labs(
+    title = "Phân bố khách hàng theo trạng thái churn",
+    x = NULL,
+    y = "Số khách hàng"
+  ) +
+  guides(fill = "none")
+```
+
+## Đặc điểm sử dụng dịch vụ
+
+```{r descriptive-statistics}
+descriptive_table <- data |>
+  dplyr::select(all_of(continuous_vars)) |>
+  summarise(
+    across(
+      everything(),
+      list(
+        N = ~ sum(!is.na(.x)),
+        Mean = ~ mean(.x, na.rm = TRUE),
+        SD = ~ sd(.x, na.rm = TRUE),
+        Min = ~ min(.x, na.rm = TRUE),
+        Q1 = ~ quantile(.x, 0.25, na.rm = TRUE),
+        Median = ~ median(.x, na.rm = TRUE),
+        Q3 = ~ quantile(.x, 0.75, na.rm = TRUE),
+        Max = ~ max(.x, na.rm = TRUE)
+      ),
+      .names = "{.col}_{.fn}"
+    )
+  ) |>
+  pivot_longer(
+    everything(),
+    names_to = c("Variable", ".value"),
+    names_pattern = "(.+)_(N|Mean|SD|Min|Q1|Median|Q3|Max)$"
+  )
+
+knitr::kable(
+  descriptive_table,
+  digits = 2,
+  caption = "Descriptive Statistics of Numeric Variables",
+  table.attr = 'class="table table-striped pca-table descriptive-table"'
+) |>
+  kableExtra::kable_styling(
+    bootstrap_options = c("striped", "hover"),
+    full_width = FALSE
+  ) |>
+  kableExtra::column_spec(1, bold = TRUE) |>
+  kableExtra::column_spec(7, bold = TRUE)
+```
+
+- **Thời lượng gọi trung vị:** churn **`r num(median(data$seconds_of_use[data$churn == "Churn"]), 0)` giây**, không churn **`r num(median(data$seconds_of_use[data$churn == "No churn"]), 0)` giây**.
+- **Customer Value trung vị:** churn **`r num(median(data$customer_value[data$churn == "Churn"]), 2)`**, không churn **`r num(median(data$customer_value[data$churn == "No churn"]), 2)`**.
+- **Thời lượng gọi lệch phải:** trung vị **`r num(median(data$seconds_of_use), 0)` giây**, tối đa **`r num(max(data$seconds_of_use), 0)` giây**; trung vị phản ánh mức sử dụng điển hình tốt hơn.
+
+## Churn theo nhóm khách hàng
+
+```{r categorical-churn-tables}
+categorical_vars <- c("complains", "tariff_plan", "status", "age_group")
+category_names <- c("Khiếu nại", "Gói cước", "Trạng thái thuê bao", "Nhóm tuổi")
+
+# Mỗi mức của biến phân loại chỉ chiếm một dòng: tổng, số churn và tỷ lệ churn.
+categorical_churn_summary <- purrr::map_dfr(categorical_vars, function(v) {
+  data |>
+    dplyr::count(Level = as.character(.data[[v]]),
+                 Churn = as.character(churn), name = "Count") |>
+    tidyr::pivot_wider(names_from = Churn, values_from = Count, values_fill = 0L) |>
+    dplyr::mutate(
+      Variable = v,
+      Customers = `No churn` + Churn,
+      `Churn rate` = Churn / Customers,
+      .before = 1
+    ) |>
+    dplyr::select(Variable, Level, Customers, `No churn`, Churn, `Churn rate`)
+})
+
+row_groups <- stats::setNames(
+  vapply(categorical_vars,
+         function(v) sum(categorical_churn_summary$Variable == v), integer(1)),
+  category_names
+)
+category_table <- categorical_churn_summary |>
+  dplyr::mutate(`Churn rate` = scales::percent(`Churn rate`, accuracy = 0.1)) |>
+  dplyr::select(-Variable)
+
+knitr::kable(
+  category_table, format = "html", row.names = FALSE,
+  col.names = c("Nhóm khách hàng", "Tổng KH", "No churn", "Churn", "Churn rate"),
+  caption = "Churn Distribution by Customer Group",
+  table.attr = 'class="table table-striped pca-table categorical-summary-table"'
+) |>
+  kableExtra::kable_styling(
+    bootstrap_options = c("striped", "hover"), full_width = FALSE
+  ) |>
+  kableExtra::pack_rows(
+    index = row_groups,
+    label_row_css = "background-color:#dfeee9; color:#245d56; font-weight:700;"
+  ) |>
+  kableExtra::column_spec(5, bold = TRUE)
+```
+
+```{r categorical-churn-plots, fig.height=8}
+plot_categorical_churn <- function(var_name, x_label) {
+  plot_data <- data |>
+    count(.data[[var_name]], churn) |>
+    group_by(.data[[var_name]]) |>
+    mutate(Proportion = n / sum(n)) |>
+    ungroup()
+
+  ggplot(
+    plot_data,
+    aes(
+      x = .data[[var_name]],
+      y = Proportion,
+      fill = churn
+    )
+  ) +
+    geom_col(position = "stack", width = 0.72,
+             color = "white", linewidth = 0.35) +
+    scale_fill_manual(values = churn_colors, drop = FALSE) +
+    scale_y_continuous(labels = scales::percent, limits = c(0, 1),
+                       expand = expansion(mult = c(0, 0.01))) +
+    labs(
+      x = x_label,
+      y = "Tỷ trọng",
+      fill = "Churn"
+    )
+}
+
+p1 <- plot_categorical_churn("complains", "Khiếu nại")
+p2 <- plot_categorical_churn("tariff_plan", "Gói cước")
+p3 <- plot_categorical_churn("status", "Trạng thái")
+p4 <- plot_categorical_churn("age_group", "Nhóm tuổi (1–5)") +
+  scale_x_discrete(labels = function(x) sub("Age group ", "", x, fixed = TRUE)) +
+  theme(axis.text.x = element_text(size = 10, margin = margin(t = 6)))
+
+((p1 + p2) / (p3 + p4)) +
+  patchwork::plot_layout(guides = "collect") +
+  patchwork::plot_annotation(title = "Churn Rate trong các nhóm khách hàng") &
+  theme(legend.position = "bottom")
+```
+
+**Chênh lệch đáng chú ý:**
+
+- **Khiếu nại:** churn **`r scales::percent(segment_churn_rate("complains", "Complaint"), accuracy = .01)`** trong nhóm có khiếu nại (`r sum(data$complains == "Complaint")` người), so với **`r scales::percent(segment_churn_rate("complains", "No complaint"), accuracy = .01)`** ở nhóm còn lại.
+- **Gói cước:** `Plan 1` churn **`r scales::percent(segment_churn_rate("tariff_plan", "Plan 1"), accuracy = .01)`** (`r sum(data$tariff_plan == "Plan 1")` khách); `Plan 2` **`r scales::percent(segment_churn_rate("tariff_plan", "Plan 2"), accuracy = .01)`** (`r sum(data$tariff_plan == "Plan 2")` khách).
+- **Trạng thái:** `Status 2` churn **`r scales::percent(segment_churn_rate("status", "Status 2"), accuracy = .01)`**, so với **`r scales::percent(segment_churn_rate("status", "Status 1"), accuracy = .01)`** ở `Status 1`.
+
+Đây là **khác biệt quan sát**, chưa cho biết nguyên nhân. Riêng `status` chưa rõ thời điểm ghi nhận.
+
+## Tương quan giữa các biến
+
+```{r correlation-heatmap, fig.height=8}
+# Mã hóa 4 biến nhị phân thành 0/1 để tính tương quan Pearson.
+# Dữ liệu phân loại gốc vẫn được giữ trong đối tượng data.
+cor_data <- data |>
+  dplyr::transmute(
+    call_failure,
+    subscription_length,
+    charge_amount,
+    seconds_of_use,
+    frequency_of_use,
+    frequency_of_sms,
+    distinct_called_numbers,
+    age,
+    customer_value,
+    complains = as.integer(complains == "Complaint"),
+    tariff_plan = as.integer(tariff_plan == "Plan 2"),
+    status = as.integer(status == "Status 2"),
+    churn = as.integer(churn == "Churn")
+  )
+
+# Kiểm tra tất cả các cột đưa vào cor() đều là numeric.
+stopifnot(all(vapply(cor_data, is.numeric, logical(1))))
+
+cor_matrix <- stats::cor(
+  cor_data,
+  use = "pairwise.complete.obs",
+  method = "pearson"
+)
+
+cor_long <- as.data.frame(cor_matrix) |>
+  rownames_to_column("Variable_1") |>
+  pivot_longer(
+    cols = -Variable_1,
+    names_to = "Variable_2",
+    values_to = "Correlation"
+  )
+
+ggplot(
+  cor_long,
+  aes(
+    x = Variable_1,
+    y = Variable_2,
+    fill = Correlation
+  )
+) +
+  geom_tile(color = "#EDF3F0", linewidth = 0.35) +
+  geom_text(
+    aes(label = sprintf("%.2f", Correlation),
+        colour = abs(Correlation) >= 0.55),
+    size = 2.7
+  ) +
+  scale_color_manual(values = c(`TRUE` = "#FFFFFF", `FALSE` = "#324D53"),
+                     guide = "none") +
+  scale_fill_gradient2(
+    low = chart_colors$blue,
+    mid = "#F8FAF8",
+    high = chart_colors$coral,
+    midpoint = 0,
+    limits = c(-1, 1)
+  ) +
+  coord_equal() +
+  labs(
+    title = "Correlation Matrix",
+    x = NULL,
+    y = NULL,
+    fill = "r"
+  ) +
+  theme(
+    axis.text.x = element_text(
+      angle = 45,
+      hjust = 1,
+      color = chart_colors$ink
+    ),
+    axis.text.y = element_text(color = chart_colors$ink)
+  )
+```
+
+Biểu đồ dùng tương quan Pearson; bốn biến nhị phân (`complains`, `tariff_plan`, `status`, `churn`) được mã hóa 0/1.
+
+**Các cặp tương quan nổi bật:**
+
+- **Trong nhóm hành vi:** `seconds_of_use` – `frequency_of_use` có r = **`r num(cor_matrix["seconds_of_use", "frequency_of_use"], 3)`**; `frequency_of_sms` – `customer_value` có r = **`r num(cor_matrix["frequency_of_sms", "customer_value"], 3)`**.
+- **Với churn:** `complains` có r = **`r num(cor_matrix["complains", "churn"], 3)`**; `status` có r = **`r num(cor_matrix["status", "churn"], 3)`**; `frequency_of_use` có r = **`r num(cor_matrix["frequency_of_use", "churn"], 3)`**.
+
+Hai cặp biến hành vi tương quan mạnh; **VIF trên train** sẽ cho biết mức đa cộng tuyến.
+
+
+
+## Chênh lệch churn theo khiếu nại — Bootstrap
+
+**Bootstrap (5.000 lần)** ước lượng chênh lệch tỷ lệ churn giữa nhóm có và không có khiếu nại. Ta lấy mẫu lại trong từng nhóm và dùng **khoảng tin cậy percentile 95%**.
+
+```{r bootstrap-complaint-difference, results='asis'}
+complaint_boot_data <- data |>
+  transmute(
+    complains,
+    churn_binary = if_else(churn == "Churn", 1, 0)
+  )
+
+complaint_rate_summary <- complaint_boot_data |>
+  group_by(complains) |>
+  summarise(
+    Sample_Size = n(),
+    Churn_Count = sum(churn_binary),
+    Churn_Rate = mean(churn_binary),
+    .groups = "drop"
+  )
+
+complaint_level_no <- "No complaint"
+complaint_level_yes <- "Complaint"
+
+complaint_diff <- function(d) {
+  mean(d$churn_binary[d$complains == complaint_level_yes]) -
+    mean(d$churn_binary[d$complains == complaint_level_no])
+}
+observed_complaint_difference <- complaint_diff(complaint_boot_data)
+bootstrap_complaint_stat <- function(dataset, indices) {
+  complaint_diff(dataset[indices, , drop = FALSE])
+}
+
+set.seed(analysis_seed)
+bootstrap_complaint <- boot::boot(
+  data = complaint_boot_data,
+  statistic = bootstrap_complaint_stat,
+  R = 5000,
+  strata = complaint_boot_data$complains
+)
+
+bootstrap_complaint_ci <- quantile(
+  as.numeric(bootstrap_complaint$t),
+  probs = c(0.025, 0.975),
+  na.rm = TRUE
+)
+
+bootstrap_complaint_results <- tibble(
+  Statistic = c("Observed difference", "Bootstrap mean", "95% CI - lower", "95% CI - upper"),
+  Value = c(observed_complaint_difference, mean(bootstrap_complaint$t, na.rm = TRUE),
+            bootstrap_complaint_ci[1], bootstrap_complaint_ci[2])
+)
+render_analysis(list(complaint_rate_summary, bootstrap_complaint_results),
+  c("Churn Rate by Complaint Status", "Bootstrap Estimate of the Churn Rate Difference"),
+  paste0("<b>Chênh lệch:</b> ", num(100 * observed_complaint_difference, 2),
+    " điểm phần trăm; <b>CI 95%:</b> [",
+    num(100 * bootstrap_complaint_ci[1], 2), "; ",
+    num(100 * bootstrap_complaint_ci[2], 2), "] điểm phần trăm."), digits = 4)
+```
+
+```{r bootstrap-complaint-plot}
+plot_hist_difference <- function(values, observed, title, subtitle, xlab,
+                                 permutation = FALSE) {
+  df <- tibble::tibble(Difference = as.numeric(values)) |>
+    dplyr::filter(is.finite(Difference))
+  if (nrow(df) == 0) stop("Không có giá trị hợp lệ để vẽ phân phối")
+  bars <- if (dplyr::n_distinct(df$Difference) == 1L) {
+    geom_col(data = dplyr::count(df, Difference), aes(y = n),
+             width = 0.06, fill = chart_colors$blue)
+  } else {
+    geom_histogram(bins = 40, fill = chart_colors$blue, colour = "white")
+  }
+  p <- ggplot(df, aes(Difference)) + bars +
+    geom_vline(xintercept = if (permutation) c(-abs(observed), abs(observed)) else observed,
+               colour = chart_colors$coral, linetype = "dashed", linewidth = 1.1)
+  if (!permutation) p <- p + geom_vline(xintercept = 0, colour = chart_colors$gold)
+  p + labs(title = title, subtitle = subtitle, x = xlab, y = "Frequency")
+}
+plot_hist_difference(bootstrap_complaint$t, observed_complaint_difference,
+  "Bootstrap Distribution of the Churn Rate Difference",
+  "Complaint minus No complaint", "Difference in Churn Rate")
+```
+## Giá trị khách hàng theo trạng thái churn — Bootstrap
+
+Ta dùng **5.000 mẫu Bootstrap theo nhóm** để ước lượng chênh lệch **trung vị `customer_value` (Churn − No churn)** và khoảng tin cậy percentile 95%.
+
+```{r additional-bootstrap-analysis, results='asis', warning=FALSE, message=FALSE, fig.width=8, fig.height=5}
+bootstrap_difference_median <- function(dataset, group_var, value_var,
+                                        group_1, group_0, R = 5000, seed = analysis_seed) {
+  d <- dataset |>
+    dplyr::transmute(group = as.character({{ group_var }}),
+                     value = as.numeric({{ value_var }})) |>
+    dplyr::filter(!is.na(group), is.finite(value), group %in% c(group_0, group_1))
+  g1 <- d$value[d$group == group_1]
+  g0 <- d$value[d$group == group_0]
+  if (!length(g1) || !length(g0)) stop("Không đủ dữ liệu cho hai nhóm Bootstrap")
+  summary <- d |>
+    dplyr::group_by(group) |>
+    dplyr::summarise(Sample_Size = dplyr::n(), Mean = mean(value),
+                     Median = median(value), Standard_Deviation = sd(value),
+                     IQR = IQR(value), .groups = "drop")
+  observed <- median(g1) - median(g0)
+  set.seed(seed)
+  values <- replicate(R, median(sample(g1, length(g1), replace = TRUE)) -
+                         median(sample(g0, length(g0), replace = TRUE)))
+  if (any(!is.finite(values))) stop("Bootstrap tạo ra giá trị không hợp lệ")
+  ci <- unname(quantile(values, c(.025, .975)))
+  list(group_summary = summary, observed_difference = observed,
+       bootstrap_values = values, confidence_interval = ci,
+       result_table = tibble::tibble(
+         Statistic = c("Observed median difference", "Bootstrap mean",
+                       "Bootstrap standard error", "95% CI - lower", "95% CI - upper"),
+         Value = c(observed, mean(values), sd(values), ci)))
+}
+
+bootstrap_value <- bootstrap_difference_median(
+  data, churn, customer_value, "Churn", "No churn", R = 5000, seed = analysis_seed)
+value_medians <- stats::setNames(bootstrap_value$group_summary$Median,
+                                bootstrap_value$group_summary$group)
+render_analysis(
+  list(bootstrap_value$group_summary, bootstrap_value$result_table),
+  c("Customer Value by Churn Status", "Bootstrap Median Difference in Customer Value"),
+  paste0("<b>Trung vị:</b> churn ", num(value_medians[["Churn"]], 2),
+    "; không churn ", num(value_medians[["No churn"]], 2),
+    ". <b>Chênh lệch:</b> ", num(bootstrap_value$observed_difference, 2),
+    "; <b>CI 95%:</b> [", num(bootstrap_value$confidence_interval[1], 2),
+    "; ", num(bootstrap_value$confidence_interval[2], 2), "]."), digits = 3)
+print(plot_hist_difference(bootstrap_value$bootstrap_values,
+  bootstrap_value$observed_difference,
+  "Bootstrap Distribution of Customer Value Median Difference",
+  "Churn minus No churn", "Median Difference in Customer Value"))
+```
+
+
+## Gói cước và churn — Permutation Test
+
+Kiểm định hoán vị **hai phía (10.000 lần)** xét chênh lệch tỷ lệ churn **Plan 1 − Plan 2**. Giả thuyết \(H_0\): hai gói có cùng tỷ lệ churn.
+
+```{r permutation-tariff-plan, results='asis'}
+ab_data <- data |>
+  transmute(
+    tariff_plan,
+    churn_binary = if_else(churn == "Churn", 1, 0)
+  )
+
+plan_levels <- levels(ab_data$tariff_plan)
+plan_a <- plan_levels[1]
+plan_b <- plan_levels[2]
+
+ab_summary <- ab_data |>
+  group_by(tariff_plan) |>
+  summarise(
+    Sample_Size = n(),
+    Churn_Count = sum(churn_binary),
+    Churn_Rate = mean(churn_binary),
+    .groups = "drop"
+  )
+
+plan_a_rate <- ab_summary$Churn_Rate[
+  ab_summary$tariff_plan == plan_a
+]
+plan_b_rate <- ab_summary$Churn_Rate[
+  ab_summary$tariff_plan == plan_b
+]
+
+observed_ab_difference <- plan_a_rate - plan_b_rate
+
+set.seed(analysis_seed)
+number_of_permutations <- 10000
+
+permuted_ab_differences <- replicate(number_of_permutations, {
+  permuted_plan <- sample(ab_data$tariff_plan, replace = FALSE)
+  mean(ab_data$churn_binary[permuted_plan == plan_a]) -
+    mean(ab_data$churn_binary[permuted_plan == plan_b])
+})
+permutation_p_value <-
+  (sum(abs(permuted_ab_differences) >= abs(observed_ab_difference)) + 1) /
+  (number_of_permutations + 1)
+
+ab_relative_risk <- plan_a_rate / plan_b_rate
+ab_odds_ratio <-
+  (plan_a_rate / (1 - plan_a_rate)) /
+  (plan_b_rate / (1 - plan_b_rate))
+
+# Fisher exact cho cùng giả thuyết khi nhóm Plan 2 rất ít trường hợp churn.
+# Đây là phép đối chiếu độ nhạy, không phải giả thuyết độc lập bổ sung.
+plan_contingency <- table(ab_data$tariff_plan, ab_data$churn_binary)
+plan_fisher_p <- stats::fisher.test(plan_contingency)$p.value
+
+permutation_results <- tibble(
+  Statistic = c(
+    "Observed difference: Plan 1 - Plan 2",
+    "Permutation p-value",
+    "Fisher exact p-value (same comparison)",
+    "Relative Risk: Plan 1 / Plan 2",
+    "Odds Ratio: Plan 1 / Plan 2",
+    "Number of permutations"
+  ),
+  Value = c(
+    observed_ab_difference,
+    permutation_p_value,
+    plan_fisher_p,
+    ab_relative_risk,
+    ab_odds_ratio,
+    number_of_permutations
+  )
+)
+
+render_analysis(list(ab_summary, permutation_results),
+  c("Churn Rate by Tariff Plan", "Permutation Test: tỷ lệ churn theo gói cước"),
+  paste0("<b>Chênh lệch Plan 1 − Plan 2:</b> ",
+    num(100 * observed_ab_difference, 2), " điểm phần trăm; ",
+    "p-value hoán vị ", formatC(permutation_p_value, digits = 5, format = "f"),
+    ". Plan 2 chỉ có ", ab_summary$Churn_Count[ab_summary$tariff_plan == plan_b],
+    " ca churn; RR và OR vì thế kém ổn định."), digits = 4)
+```
+
+```{r permutation-tariff-plot}
+plot_hist_difference(permuted_ab_differences, observed_ab_difference,
+  "Permutation Null Distribution", "Plan 1 minus Plan 2",
+  "Permuted Difference", permutation = TRUE)
+```
+
+
+## Tần suất sử dụng theo trạng thái churn — Permutation Test
+
+Ta so sánh **số lần sử dụng trung bình** giữa hai nhóm qua chênh lệch **Churn − No churn**. Kiểm định hoán vị **hai phía (10.000 lần)** xét giả thuyết tần suất sử dụng không gắn với trạng thái churn.
+
+```{r additional-permutation-tests, results='asis', warning=FALSE, message=FALSE, fig.width=8, fig.height=5}
+permutation_mean_difference <- function(dataset, group_var, value_var,
+                                        group_1, group_0, R = 10000, seed = analysis_seed) {
+  d <- dataset |>
+    dplyr::transmute(group = as.character({{ group_var }}),
+                     value = as.numeric({{ value_var }})) |>
+    dplyr::filter(!is.na(group), is.finite(value), group %in% c(group_0, group_1))
+  if (!all(c(group_1, group_0) %in% d$group)) stop("Thiếu nhóm để hoán vị")
+  summary <- d |>
+    dplyr::group_by(group) |>
+    dplyr::summarise(Sample_Size = dplyr::n(), Mean = mean(value),
+                     Median = median(value), Standard_Deviation = sd(value),
+                     IQR = IQR(value), .groups = "drop")
+  observed <- mean(d$value[d$group == group_1]) - mean(d$value[d$group == group_0])
+  # Giữ nguyên nhãn và số lượng trong mỗi nhóm, hoán vị giá trị sử dụng.
+  idx_1 <- which(d$group == group_1)
+  idx_0 <- which(d$group == group_0)
+  set.seed(seed)
+  differences <- replicate(R, {
+    permuted <- sample(d$value, size = nrow(d), replace = FALSE)
+    mean(permuted[idx_1]) - mean(permuted[idx_0])
+  })
+  extreme <- sum(abs(differences) >= abs(observed))
+  p_value <- (extreme + 1) / (R + 1)
+  mc_ci <- stats::binom.test(extreme, R, conf.level = .99)$conf.int
+  list(group_summary = summary, observed_difference = observed,
+       permutation_differences = differences, permutation_p_value = p_value,
+       monte_carlo_ci = mc_ci,
+       result_table = tibble::tibble(
+         Statistic = c("Observed mean difference", "Permutation p-value",
+                       "MC uncertainty 99% - lower", "MC uncertainty 99% - upper",
+                       "Number of permutations"),
+         Value = c(observed, p_value, mc_ci[1], mc_ci[2], R)))
+}
+
+permutation_usage <- permutation_mean_difference(
+  data, churn, frequency_of_use, "Churn", "No churn", R = 10000,
+  seed = analysis_seed)
+usage_means <- stats::setNames(permutation_usage$group_summary$Mean,
+                               permutation_usage$group_summary$group)
+render_analysis(
+  list(permutation_usage$group_summary, permutation_usage$result_table),
+  c("Frequency of Use by Churn Status", "Permutation Test: Frequency of Use"),
+  paste0("<b>Số lượt trung bình:</b> churn ", num(usage_means[["Churn"]], 2),
+    "; không churn ", num(usage_means[["No churn"]], 2),
+    ". <b>Chênh lệch:</b> ", num(permutation_usage$observed_difference, 2),
+    " lượt; <b>p hoán vị:</b> ",
+    format.pval(permutation_usage$permutation_p_value, digits = 4, eps = .0001), "."),
+  digits = 4)
+print(plot_hist_difference(permutation_usage$permutation_differences,
+  permutation_usage$observed_difference,
+  "Permutation Null Distribution: Frequency of Use",
+  "Churn minus No churn", "Permuted Difference in Mean Frequency of Use",
+  permutation = TRUE))
+```
+
+
+## Tổng hợp kiểm định hoán vị
+
+Hai p-value hoán vị được **điều chỉnh Holm** vì ta xét đồng thời gói cước và tần suất sử dụng.
+
+```{r permutation-holm-summary}
+permutation_holm_summary <- tibble::tibble(
+  Comparison = c("Plan 1 vs Plan 2", "Frequency: churn vs no churn"),
+  `Difference` = c(observed_ab_difference, permutation_usage$observed_difference),
+  Unit = c("proportion", "uses"),
+  `Permutation p-value` = c(permutation_p_value, permutation_usage$permutation_p_value)
+) |>
+  dplyr::mutate(
+    `Holm-adjusted p-value` = p.adjust(`Permutation p-value`, method = "holm"),
+    `Significant at 5% after Holm` =
+      if_else(`Holm-adjusted p-value` < 0.05, "Yes", "No")
+  )
+
+knitr::kable(
+  permutation_holm_summary,
+  digits = 4,
+  caption = "Permutation Tests — Raw and Holm-adjusted p-values"
+) |>
+  kableExtra::kable_styling(
+    bootstrap_options = c("striped", "hover"), full_width = FALSE
+  )
+```
+
+- **Gói cước:** Plan 1 − Plan 2 = **`r num(100 * observed_ab_difference, 2)` điểm phần trăm**; p-value Holm = **`r num(permutation_holm_summary[["Holm-adjusted p-value"]][1], 4)`**.
+- **Tần suất sử dụng:** Churn − No churn = **`r num(permutation_usage$observed_difference, 2)` lượt**; p-value Holm = **`r num(permutation_holm_summary[["Holm-adjusted p-value"]][2], 4)`**.
+
+## Độ nhạy với việc loại dòng trùng
+
+Ta tính lại bốn chênh lệch trên **3.150 dòng gốc** và **2.850 dòng sau loại trùng**, với cùng số lần lấy mẫu và seed. Ta đối chiếu chiều chênh lệch, khoảng tin cậy và p-value.
+
+```{r resampling-dedup-sensitivity, results='asis', warning=FALSE, message=FALSE}
+# Bootstrap 1 — khiếu nại; cùng cách lấy mẫu phân tầng như phân tích chính.
+complaint_raw <- data_before_dedup |>
+  dplyr::transmute(complains, churn_binary = as.integer(churn == "Churn"))
+set.seed(analysis_seed)
+bootstrap_complaint_raw <- boot::boot(
+  complaint_raw, bootstrap_complaint_stat, R = 5000, strata = complaint_raw$complains)
+complaint_raw_ci <- unname(stats::quantile(as.numeric(bootstrap_complaint_raw$t),
+                                            c(.025, .975)))
+complaint_raw_diff <- complaint_diff(complaint_raw)
+
+# Bootstrap 2 — trung vị customer_value.
+bootstrap_value_raw <- bootstrap_difference_median(
+  data_before_dedup, churn, customer_value, "Churn", "No churn",
+  R = 5000, seed = analysis_seed)
+
+# Permutation 1 — gói cước (nhãn churn giữ cố định, hoán vị gói cước).
+plan_raw <- data_before_dedup |>
+  dplyr::transmute(tariff_plan, churn_binary = as.integer(churn == "Churn"))
+raw_plan_a_rate <- mean(plan_raw$churn_binary[plan_raw$tariff_plan == plan_a])
+raw_plan_b_rate <- mean(plan_raw$churn_binary[plan_raw$tariff_plan == plan_b])
+raw_plan_difference <- raw_plan_a_rate - raw_plan_b_rate
+set.seed(analysis_seed)
+raw_plan_permutations <- replicate(number_of_permutations, {
+  group_perm <- sample(plan_raw$tariff_plan, replace = FALSE)
+  mean(plan_raw$churn_binary[group_perm == plan_a]) -
+    mean(plan_raw$churn_binary[group_perm == plan_b])
+})
+raw_plan_p <- (sum(abs(raw_plan_permutations) >= abs(raw_plan_difference)) + 1) /
+  (number_of_permutations + 1)
+raw_plan_fisher_p <- stats::fisher.test(
+  table(plan_raw$tariff_plan, plan_raw$churn_binary))$p.value
+
+# Permutation 2 — trung bình frequency_of_use.
+permutation_usage_raw <- permutation_mean_difference(
+  data_before_dedup, churn, frequency_of_use, "Churn", "No churn",
+  R = 10000, seed = analysis_seed)
+
+format_boot <- function(est, ci, factor = 1, suffix = "")
+  paste0(num(est * factor, 2), suffix, "; CI 95% [",
+         num(ci[1] * factor, 2), "; ", num(ci[2] * factor, 2), "]")
+format_perm <- function(est, p, factor = 1, suffix = "")
+  paste0(num(est * factor, 2), suffix, "; p = ",
+         format.pval(p, digits = 3, eps = .0001))
+
+sensitivity_table <- tibble::tibble(
+  Analysis = c("Bootstrap: khiếu nại (pp)", "Bootstrap: customer_value",
+               "Permutation: gói cước (pp)", "Permutation: frequency_of_use"),
+  `Raw (3,150 rows)` = c(
+    format_boot(complaint_raw_diff, complaint_raw_ci, 100, " pp"),
+    format_boot(bootstrap_value_raw$observed_difference,
+                bootstrap_value_raw$confidence_interval),
+    paste0(format_perm(raw_plan_difference, raw_plan_p, 100, " pp"),
+           "; Fisher p = ", format.pval(raw_plan_fisher_p, digits = 3, eps = .0001)),
+    format_perm(permutation_usage_raw$observed_difference,
+                permutation_usage_raw$permutation_p_value)),
+  `Deduplicated (2,850 rows)` = c(
+    format_boot(observed_complaint_difference, bootstrap_complaint_ci, 100, " pp"),
+    format_boot(bootstrap_value$observed_difference, bootstrap_value$confidence_interval),
+    paste0(format_perm(observed_ab_difference, permutation_p_value, 100, " pp"),
+           "; Fisher p = ", format.pval(plan_fisher_p, digits = 3, eps = .0001)),
+    format_perm(permutation_usage$observed_difference,
+                permutation_usage$permutation_p_value))
+)
+cat(as.character(knitr::kable(
+  sensitivity_table, format = "html", row.names = FALSE,
+  caption = "Sensitivity to Duplicate Removal — Estimates, CIs and Raw p-values",
+  table.attr = 'class="table table-striped pca-table"')))
+
+same_sign <- function(a, b) sign(a) == sign(b)
+raw_perm_holm <- stats::p.adjust(
+  c(raw_plan_p, permutation_usage_raw$permutation_p_value), method = "holm")
+clean_perm_holm <- permutation_holm_summary[["Holm-adjusted p-value"]]
+all_same_direction <- all(c(
+  same_sign(complaint_raw_diff, observed_complaint_difference),
+  same_sign(bootstrap_value_raw$observed_difference, bootstrap_value$observed_difference),
+  same_sign(raw_plan_difference, observed_ab_difference),
+  same_sign(permutation_usage_raw$observed_difference, permutation_usage$observed_difference)))
+same_holm_conclusion <- all((raw_perm_holm < .05) == (clean_perm_holm < .05))
+cat("<p><b>Sau khi loại trùng:</b> ",
+    if (all_same_direction) "Cả bốn chênh lệch giữ nguyên chiều" else "Có chênh lệch đổi chiều",
+    "; hai kiểm định hoán vị sau Holm ",
+    if (same_holm_conclusion) "giữ nguyên kết luận ở mức 5%" else "thay đổi kết luận ở mức 5%",
+    ".</p>\n", sep = "")
+```
+
+*Bảng độ nhạy ghi p-value thô; phần kết luận kiểm định dùng p-value Holm. Những chênh lệch này không hàm ý quan hệ nhân quả.*
+
+# Xây dựng mô hình dự báo
+
+Ba mô hình Logistic được so sánh:
+
+- **Full:** 7 biến về mức sử dụng và thời gian đăng ký.
+- **Reduced:** chọn biến từ Full theo **AIC trên train**.
+- **Expanded:** thêm `complains`, `tariff_plan`, `status` và `age` để kiểm tra phần thông tin tăng thêm.
+
+Ta không đưa `age_group` cùng `age` để tránh lặp thông tin; `charge_amount` chưa đủ rõ để đưa vào mô hình. Chia mẫu **80/20 phân tầng**, **5-fold CV**, seed **`r analysis_seed`**.
+
+## Chuẩn bị dữ liệu cho mô hình
+
+```{r classification-data-preparation}
+model_predictors_usage <- c(
+  "call_failure", "subscription_length", "seconds_of_use",
+  "frequency_of_use", "frequency_of_sms",
+  "distinct_called_numbers", "customer_value"
+)
+model_predictors_expanded <- c(
+  model_predictors_usage,
+  "complains", "tariff_plan", "status", "age"
+)
+
+classification_precheck <- data |>
+  dplyr::mutate(churn_binary = as.integer(churn == "Churn")) |>
+  dplyr::select(churn_binary, dplyr::all_of(model_predictors_expanded))
+missing_model_cols <- vapply(classification_precheck, function(x) sum(is.na(x)), integer(1))
+model_rows_missing <- sum(!stats::complete.cases(classification_precheck))
+model_churn_before <- mean(classification_precheck$churn_binary == 1, na.rm = TRUE)
+if (model_rows_missing > 0L) {
+  stop("Phát hiện ", model_rows_missing, " hồ sơ thiếu biến mô hình. ",
+       "Để tránh mất dữ liệu và leakage khi làm CV, cần triển khai ",
+       "imputation theo từng fold train trước khi tiếp tục.")
+}
+classification_data <- classification_precheck
+model_churn_after <- mean(classification_data$churn_binary == 1)
+
+stopifnot(
+  all(classification_data$churn_binary %in% c(0L, 1L)),
+  length(unique(classification_data$churn_binary)) == 2L
+)
+
+classification_data |>
+  dplyr::count(churn_binary, name = "Customers") |>
+  dplyr::mutate(
+    Churn = ifelse(churn_binary == 1, "Churn", "No churn"),
+    Proportion = scales::percent(Customers / sum(Customers), accuracy = 0.1)
+  ) |>
+  dplyr::select(Churn, Customers, Proportion) |>
+  knitr::kable(caption = "Class Distribution for Modeling",
+    table.attr = 'class="table table-striped pca-table model-prep-table"') |>
+  kableExtra::kable_styling(bootstrap_options = c("striped", "hover"),
+                            full_width = FALSE) |>
+  kableExtra::column_spec(2, bold = TRUE)
+```
+
+Cả **`r nrow(classification_precheck)` hồ sơ** đều được giữ để chia mẫu; **`r model_rows_missing` hồ sơ thiếu biến mô hình**. Tỷ lệ churn: **`r scales::percent(model_churn_after, accuracy=.01)`**.
+
+## Chia tập train/test
+
+```{r train-test-split-final}
+classification_data <- classification_data |>
+  dplyr::mutate(observation_id = dplyr::row_number())
+
+set.seed(analysis_seed)
+train_ids <- classification_data |>
+  dplyr::group_by(churn_binary) |>
+  dplyr::slice_sample(prop = 0.80) |>
+  dplyr::ungroup() |>
+  dplyr::pull(observation_id)
+
+stopifnot(length(unique(train_ids)) == length(train_ids),
+          all(train_ids %in% classification_data$observation_id))
+train_model_data <- classification_data |>
+  dplyr::filter(observation_id %in% train_ids) |>
+  dplyr::select(-observation_id)
+
+test_model_data <- classification_data |>
+  dplyr::filter(!observation_id %in% train_ids) |>
+  dplyr::select(-observation_id)
+stopifnot(nrow(train_model_data) + nrow(test_model_data) == nrow(classification_data),
+          all(vapply(list(train_model_data, test_model_data),
+                     function(d) all(d$churn_binary %in% c(0L, 1L)), logical(1))))
+
+split_summary <- dplyr::bind_rows(
+  train_model_data |>
+    dplyr::count(churn_binary) |>
+    dplyr::mutate(Dataset = "Train"),
+  test_model_data |>
+    dplyr::count(churn_binary) |>
+    dplyr::mutate(Dataset = "Test")
+) |>
+  dplyr::group_by(Dataset) |>
+  dplyr::mutate(Proportion = n / sum(n)) |>
+  dplyr::ungroup()
+
+split_summary |>
+  dplyr::mutate(
+    Churn = ifelse(churn_binary == 1, "Churn", "No churn"),
+    Proportion = scales::percent(Proportion, accuracy = 0.1)
+  ) |>
+  dplyr::select(Dataset, Churn, Customers = n, Proportion) |>
+  knitr::kable(caption = "Stratified 80/20 Train–Test Split",
+    table.attr = 'class="table table-striped pca-table train-test-table"') |>
+  kableExtra::kable_styling(bootstrap_options = c("striped", "hover"),
+                            full_width = FALSE) |>
+  kableExtra::column_spec(3, bold = TRUE)
+```
+
+**Train:** `r nrow(train_model_data)` hồ sơ, `r sum(train_model_data$churn_binary == 1)` churn. **Test:** `r nrow(test_model_data)` hồ sơ, `r sum(test_model_data$churn_binary == 1)` churn.
+
+
+## Full Logistic — bảy biến sử dụng
+
+```{r logistic-full}
+full_formula <- stats::reformulate(
+  model_predictors_usage, response = "churn_binary"
+)
+logistic_full <- stats::glm(
+  formula = full_formula,
+  data = train_model_data,
+  family = stats::binomial(link = "logit"),
+  control = stats::glm.control(maxit = 100)
+)
+summary(logistic_full)
+```
+
+**OR** cho biết odds churn thay đổi bao nhiêu lần khi một biến tăng một đơn vị, giữ các biến khác không đổi. OR của những biến khác đơn vị **không so sánh trực tiếp**.
+
+```{r full-logistic-odds-ratio}
+full_or_table <- broom::tidy(logistic_full) |>
+  dplyr::mutate(
+    Odds_Ratio = exp(estimate),
+    `OR 95% lower` = exp(estimate - 1.96 * std.error),
+    `OR 95% upper` = exp(estimate + 1.96 * std.error)
+  ) |>
+  dplyr::select(Predictor = term, Odds_Ratio,
+                `OR 95% lower`, `OR 95% upper`, p.value)
+knitr::kable(full_or_table, digits = 4,
+    caption = "Odds Ratio — Full Logistic trên tập train",
+    table.attr = 'class="table table-striped pca-table"') |>
+  kableExtra::kable_styling(
+    bootstrap_options = c("striped", "hover"), full_width = FALSE)
+```
+
+Bảng dùng **CI Wald 95%**; hệ số Logistic không thể xem là tác động nhân quả.
+
+### Kiểm tra đa cộng tuyến trên train
+
+```{r logistic-vif, results='asis'}
+vif_values <- car::vif(logistic_full)
+vif_table <- tibble::tibble(
+  Variable = names(vif_values),
+  VIF = as.numeric(vif_values)
+) |>
+  dplyr::arrange(dplyr::desc(VIF))
+compact_table_with_note(vif_table,
+  "Variance Inflation Factor — Usage-only Logistic", paste0(
+  "<strong>Nhận xét</strong><ul>",
+  "<li>VIF lớn nhất <b>", num(max(vif_table$VIF), 2), "</b> ở biến <b>",
+  vif_table$Variable[which.max(vif_table$VIF)], "</b>.</li>",
+  "<li>", if (max(vif_table$VIF) >= 10) {
+    "VIF trên 10; hệ số của từng biến có thể biến động mạnh."
+  } else if (max(vif_table$VIF) >= 5) {
+    "Có VIF từ 5 trở lên; cần đọc hệ số cùng các biến tương quan."
+  } else { "VIF chưa vượt ngưỡng tham khảo 5." }, "</li>",
+  "</ul>"), digits = 2)
+```
+
+## Reduced Logistic — lựa chọn theo AIC
+
+```{r logistic-stepwise}
+logistic_reduced <- stats::step(
+  logistic_full, direction = "both", trace = 0
+)
+
+reduced_terms <- attr(stats::terms(logistic_reduced), "term.labels")
+comparison_aic <- tibble::tibble(
+  Model = c("Full Logistic", "Reduced Logistic"),
+  Number_of_predictors = c(
+    length(model_predictors_usage), length(reduced_terms)
+  ),
+  AIC_train = c(AIC(logistic_full), AIC(logistic_reduced)),
+  Residual_deviance_train = c(
+    stats::deviance(logistic_full), stats::deviance(logistic_reduced)
+  )
+)
+knitr::kable(comparison_aic, digits = 3,
+  caption = "Model Size and Fit — Training Data")
+formula(logistic_reduced)
+```
+
+```{r reduced-coefficients}
+reduced_coefficients <- broom::tidy(logistic_reduced) |>
+  dplyr::mutate(
+    Odds_Ratio = exp(estimate),
+    OR_CI_lower = exp(estimate - 1.96 * std.error),
+    OR_CI_upper = exp(estimate + 1.96 * std.error)
+  ) |>
+  dplyr::select(term, estimate, Odds_Ratio,
+    OR_CI_lower, OR_CI_upper, p.value)
+
+knitr::kable(
+  reduced_coefficients, digits = 4,
+  col.names = c("Predictor", "Log-odds", "Odds Ratio",
+                "OR 95% lower", "OR 95% upper", "Wald p-value"),
+  caption = "Reduced Logistic Coefficients (exploratory)"
+) |>
+  kableExtra::kable_styling(
+    bootstrap_options = c("striped", "hover"), full_width = FALSE
+  )
+```
+
+Trên train, **AIC giảm từ `r num(AIC(logistic_full), 2)` xuống `r num(AIC(logistic_reduced), 2)`** sau khi rút gọn. Reduced còn **`r length(reduced_terms)`/7 biến**: `r if (length(reduced_terms)) paste(reduced_terms, collapse = ", ") else "chỉ hệ số chặn"`.
+
+**AIC không đo chất lượng dự báo trên test.** P-value sau lựa chọn biến theo AIC chỉ dùng tham khảo.
+
+## Expanded Logistic — bổ sung thông tin tài khoản
+
+```{r logistic-expanded, results='asis'}
+expanded_formula <- stats::reformulate(
+  model_predictors_expanded, response = "churn_binary"
+)
+logistic_expanded <- stats::glm(
+  formula = expanded_formula,
+  data = train_model_data,
+  family = stats::binomial(link = "logit"),
+  control = stats::glm.control(maxit = 100)
+)
+
+expanded_fit_table <- tibble::tibble(
+  Model = c("Full usage-only", "Reduced AIC", "Expanded"),
+  Number_of_predictors = c(
+    length(model_predictors_usage), length(reduced_terms),
+    length(model_predictors_expanded)
+  ),
+  AIC_train = c(
+    AIC(logistic_full), AIC(logistic_reduced), AIC(logistic_expanded)
+  )
+)
+compact_table_with_note(expanded_fit_table,
+  "Training AIC of Three Logistic Models", paste0(
+    "<b>AIC</b> phản ánh độ khớp train có phạt số biến; không bảo đảm AP trên test cao hơn."), digits = 2)
+```
+
+**AIC trên train:** Expanded **`r num(AIC(logistic_expanded), 2)`**, Full **`r num(AIC(logistic_full), 2)`**, Reduced **`r num(AIC(logistic_reduced), 2)`**. Kết quả Expanded chỉ **tham khảo** do chưa rõ thời điểm ghi nhận `status`.
+
+### Kiểm tra Expanded: đa cộng tuyến và độ nhạy với `status`
+
+```{r expanded-vif-and-influence, results='asis'}
+expanded_vif_raw <- tryCatch(car::vif(logistic_expanded), error = function(e) e)
+if (inherits(expanded_vif_raw, "error")) {
+  cat("<p>Không tính được VIF của Expanded: ",
+      conditionMessage(expanded_vif_raw), "</p>", sep = "")
+} else {
+  if (is.matrix(expanded_vif_raw)) {
+    expanded_vif_table <- tibble::tibble(
+      Variable = rownames(expanded_vif_raw),
+      GVIF = as.numeric(expanded_vif_raw[, "GVIF"]),
+      Df = as.numeric(expanded_vif_raw[, "Df"]),
+      `Adjusted GVIF` = as.numeric(expanded_vif_raw[, "GVIF^(1/(2*Df))"])
+    )
+  } else {
+    expanded_vif_table <- tibble::tibble(
+      Variable = names(expanded_vif_raw),
+      VIF = as.numeric(expanded_vif_raw),
+      `Adjusted GVIF` = sqrt(as.numeric(expanded_vif_raw))
+    )
+  }
+  expanded_vif_table <- dplyr::arrange(expanded_vif_table,
+                                       dplyr::desc(`Adjusted GVIF`))
+  cat(as.character(tab(expanded_vif_table,
+    "VIF / GVIF điều chỉnh của Expanded trên train", digits = 2)))
+}
+cook_full <- stats::cooks.distance(logistic_full)
+cook_cutoff <- 4 / nrow(train_model_data)
+cat("<p>Ở Full, có <strong>", sum(cook_full > cook_cutoff, na.rm = TRUE),
+    "</strong> quan sát train vượt ngưỡng tham khảo Cook's D &gt; ",
+    num(cook_cutoff, 4), ". Đây là chỉ dấu cần kiểm tra độ nhạy,",
+    " không phải lý do để xóa hồ sơ.</p>", sep = "")
+```
+
+Ta dùng **GVIF đã điều chỉnh** cho biến nhiều mức; giá trị cao cho thấy hệ số có thể kém ổn định.
+
+### Kiểm tra tuyến tính trên thang log-odds
+
+```{r logistic-linearity-train}
+linearity_candidates <- c("subscription_length", "seconds_of_use",
+                          "frequency_of_use", "customer_value")
+linearity_check <- purrr::map_dfr(linearity_candidates, function(v) {
+  spline_term <- paste0("splines::ns(", v, ", df = 3)")
+  alternative <- stats::reformulate(
+    c(setdiff(model_predictors_usage, v), spline_term),
+    response = "churn_binary"
+  )
+  fit <- tryCatch(stats::glm(alternative, data = train_model_data,
+    family = stats::binomial(), control = stats::glm.control(maxit = 100)),
+    error = function(e) NULL)
+  if (is.null(fit)) return(tibble::tibble(
+    Variable = v, LR = NA_real_, Df = NA_real_, `Exploratory p` = NA_real_))
+  df_delta <- attr(stats::logLik(fit), "df") -
+              attr(stats::logLik(logistic_full), "df")
+  lr <- 2 * (as.numeric(stats::logLik(fit)) -
+             as.numeric(stats::logLik(logistic_full)))
+  tibble::tibble(Variable = v, LR = lr, Df = df_delta,
+    `Exploratory p` = if (df_delta > 0) {
+      stats::pchisq(max(0, lr), df = df_delta, lower.tail = FALSE)
+    } else NA_real_)
+})
+tab(linearity_check, "Kiểm tra spline bậc tự do 3 so với Full tuyến tính (train)", digits = 4)
+```
+
+Thay từng biến liên tục bằng **natural spline (df = 3)**, có **`r sum(linearity_check[["Exploratory p"]] < .05, na.rm = TRUE)`/4 biến** cho khác biệt đáng kể so với dạng tuyến tính ở mức 5%. Đây là kiểm tra thăm dò trên train; mô hình dự báo vẫn dùng biến gốc.
+
+# Đánh giá và lựa chọn mô hình
+
+## Các chỉ số và quy tắc lựa chọn
+
+Churn chỉ chiếm **`r scales::percent(mean(train_model_data$churn_binary), accuracy = .1)`** ở train. Vì vậy, ta chọn mô hình theo **AP trên OOF**; nếu gần bằng nhau thì xét Balanced Accuracy, rồi Brier Score. ROC-AUC đo khả năng phân biệt; Brier đo sai số xác suất. Các chỉ số phân loại dùng ngưỡng Youden từ train.
+
+```{r evaluation-functions}
+safe_divide <- function(a, b) {
+  if (b == 0) return(NA_real_)
+  as.numeric(a / b)
+}
+
+average_precision <- function(actual, probability) {
+  if (length(actual) != length(probability)) {
+    stop("actual và probability phải có cùng độ dài")
+  }
+  if (anyNA(actual) || anyNA(probability) ||
+      any(!is.finite(probability))) {
+    stop("AP cần nhãn và xác suất không khuyết")
+  }
+  if (sum(actual == 1) == 0L) return(NA_real_)
+  ord <- order(probability, decreasing = TRUE)
+  y <- as.integer(actual[ord] == 1)
+  score <- probability[ord]
+  # Kết thúc từng nhóm điểm có cùng xác suất để không phụ thuộc
+  # vào thứ tự quan sát khi xuất hiện ties.
+  end_idx <- which(!duplicated(score, fromLast = TRUE))
+  recall <- cumsum(y)[end_idx] / sum(y)
+  precision <- cumsum(y)[end_idx] / end_idx
+  sum(diff(c(0, recall)) * precision)
+}
+
+classification_metrics <- function(actual, probability, threshold,
+                                   model_name = "Model") {
+  stopifnot(length(actual) == length(probability),
+            all(actual %in% c(0L, 1L)),
+            all(is.finite(probability)),
+            length(threshold) == 1L, is.finite(threshold))
+  predicted <- as.integer(probability >= threshold)
+  cm <- table(
+    Predicted = factor(predicted, levels = c(0, 1)),
+    Actual = factor(actual, levels = c(0, 1))
+  )
+  tn <- unname(cm["0", "0"])
+  fn <- unname(cm["0", "1"])
+  fp <- unname(cm["1", "0"])
+  tp <- unname(cm["1", "1"])
+  sensitivity <- safe_divide(tp, tp + fn)
+  specificity <- safe_divide(tn, tn + fp)
+  precision <- safe_divide(tp, tp + fp)
+  accuracy <- safe_divide(tp + tn, sum(cm))
+  f1 <- safe_divide(2 * tp, 2 * tp + fp + fn)
+  roc_obj <- pROC::roc(
+    response = factor(actual, levels = c(0, 1)),
+    predictor = probability,
+    levels = c("0", "1"), direction = "<", quiet = TRUE
+  )
+  tibble::tibble(
+    model = model_name, threshold = threshold,
+    accuracy = accuracy, sensitivity = sensitivity,
+    specificity = specificity, precision = precision,
+    f1 = f1,
+    balanced_accuracy = mean(c(sensitivity, specificity)),
+    auc = as.numeric(pROC::auc(roc_obj)),
+    average_precision = average_precision(actual, probability),
+    brier = mean((probability - actual)^2),
+    tn = as.integer(tn), fp = as.integer(fp),
+    fn = as.integer(fn), tp = as.integer(tp)
+  )
+}
+
+choose_youden <- function(actual, probability) {
+  roc_obj <- pROC::roc(
+    response = actual, predictor = probability,
+    levels = c(0, 1), direction = "<", quiet = TRUE
+  )
+  best <- as.data.frame(pROC::coords(
+    roc_obj, x = "best", best.method = "youden",
+    ret = c("threshold", "sensitivity", "specificity"),
+    transpose = FALSE
+  ))
+  # Nếu có nhiều điểm cùng J, lấy điểm có Specificity cao hơn
+  # để giảm số cảnh báo sai; không nhìn vào test để giải tie.
+  best <- best[order(-best$specificity, -best$threshold), , drop = FALSE]
+  best[1, , drop = FALSE]
+}
+```
+
+## Cross-validation và quyết định trên train
+
+```{r cross-validation-oof}
+set.seed(analysis_seed)
+n_folds <- 5L
+fold_id <- integer(nrow(train_model_data))
+for (class_id in c(0L, 1L)) {
+  ix <- which(train_model_data$churn_binary == class_id)
+  fold_id[ix] <- sample(rep(seq_len(n_folds), length.out = length(ix)))
+}
+
+fold_selected_terms <- vector("list", n_folds)
+oof_predictions <- tibble::tibble(
+  churn_binary = train_model_data$churn_binary,
+  Full = rep(NA_real_, nrow(train_model_data)),
+  Reduced = rep(NA_real_, nrow(train_model_data)),
+  Expanded = rep(NA_real_, nrow(train_model_data))
+)
+
+for (k in seq_len(n_folds)) {
+  fold_train <- train_model_data[fold_id != k, , drop = FALSE]
+  fold_valid <- train_model_data[fold_id == k, , drop = FALSE]
+
+  fit_full_fold <- stats::glm(
+    full_formula, data = fold_train, family = stats::binomial(),
+    control = stats::glm.control(maxit = 100)
+  )
+  # Chọn biến lại trên 4/5 train, KHÔNG sử dụng fold validation.
+  fit_reduced_fold <- stats::step(
+    fit_full_fold, direction = "both", trace = 0
+  )
+  fold_selected_terms[[k]] <- attr(stats::terms(fit_reduced_fold), "term.labels")
+  fit_expanded_fold <- stats::glm(
+    expanded_formula, data = fold_train, family = stats::binomial(),
+    control = stats::glm.control(maxit = 100)
+  )
+  stopifnot(all(vapply(list(fit_full_fold, fit_reduced_fold, fit_expanded_fold),
+                       function(fit) isTRUE(fit$converged), logical(1))))
+
+  oof_predictions$Full[fold_id == k] <- stats::predict(
+    fit_full_fold, newdata = fold_valid, type = "response"
+  )
+  oof_predictions$Reduced[fold_id == k] <- stats::predict(
+    fit_reduced_fold, newdata = fold_valid, type = "response"
+  )
+  oof_predictions$Expanded[fold_id == k] <- stats::predict(
+    fit_expanded_fold, newdata = fold_valid, type = "response"
+  )
+}
+
+stopifnot(!anyNA(oof_predictions),
+          all(is.finite(as.matrix(oof_predictions[, -1]))),
+          all(as.matrix(oof_predictions[, -1]) >= 0 &
+              as.matrix(oof_predictions[, -1]) <= 1))
+
+model_names <- c("Full", "Reduced", "Expanded")
+model_thresholds <- vapply(model_names, function(name) {
+  as.numeric(choose_youden(oof_predictions$churn_binary,
+                           oof_predictions[[name]])$threshold)
+}, numeric(1))
+cv_comparison <- purrr::map_dfr(model_names, function(name) {
+  classification_metrics(oof_predictions$churn_binary,
+                         oof_predictions[[name]], model_thresholds[[name]], name)
+})
+
+knitr::kable(
+  cv_comparison |>
+    dplyr::select(model, threshold, auc, average_precision, brier,
+                  sensitivity, specificity, precision, f1,
+                  balanced_accuracy) |>
+    dplyr::mutate(dplyr::across(dplyr::where(is.numeric),
+                   ~ round(.x, 3))),
+  caption = "OOF Train Evaluation and Youden Thresholds — 5-fold CV"
+) |>
+  kableExtra::kable_styling(
+    bootstrap_options = c("striped", "hover"), full_width = FALSE
+  )
+
+# Quy tắc lựa chọn được ấn định trên train:
+# ưu tiên Average Precision; hòa thì Balanced Accuracy, Brier.
+cv_ranked <- cv_comparison |>
+  dplyr::arrange(dplyr::desc(average_precision),
+                 dplyr::desc(balanced_accuracy), brier)
+selected_model <- cv_ranked$model[[1]]
+selected_threshold <- model_thresholds[[selected_model]]
+# Phương án không sử dụng các biến tài khoản: lựa chọn độc lập bằng OOF train.
+cv_usage_ranked <- cv_comparison |>
+  dplyr::filter(model %in% c("Full", "Reduced")) |>
+  dplyr::arrange(dplyr::desc(average_precision),
+                 dplyr::desc(balanced_accuracy), brier)
+usage_selected_model <- cv_usage_ranked$model[[1]]
+usage_selected_threshold <- model_thresholds[[usage_selected_model]]
+stopifnot(usage_selected_model %in% c("Full", "Reduced"))
+```
+
+**Kết quả trên train (OOF):**
+
+- **Mô hình dẫn đầu:** `r selected_model` (AP **`r num(cv_ranked$average_precision[1], 3)`**, ROC-AUC **`r num(cv_ranked$auc[1], 3)`**, Brier **`r num(cv_ranked$brier[1], 3)`**).
+- **Ngưỡng Youden OOF:** **`r num(selected_threshold, 3)`**.
+- **Phương án không dùng `status`:** `r usage_selected_model` (AP **`r num(cv_usage_ranked$average_precision[1], 3)`**, ngưỡng **`r num(usage_selected_threshold, 3)`**).
+
+AP OOF có thể hơi lạc quan vì cùng dữ liệu được dùng chọn mô hình và ngưỡng; **test không tham gia lựa chọn**.
+
+
+### Độ ổn định của biến được Reduced chọn
+
+```{r reduced-fold-frequency}
+reduced_selection <- tibble::tibble(
+  Predictor = model_predictors_usage,
+  `Folds selected` = vapply(model_predictors_usage, function(v) {
+    sum(vapply(fold_selected_terms, function(z) v %in% z, logical(1)))
+  }, integer(1))
+)
+tab(reduced_selection, "Số fold (trên 5) giữ mỗi biến trong Reduced AIC", digits = 0)
+```
+
+Trong 5 fold, **`r reduced_selection$Predictor[which.min(reduced_selection[["Folds selected"]])]`** chỉ được chọn **`r min(reduced_selection[["Folds selected"]])` lần**. Tập biến Reduced vì thế chưa hoàn toàn ổn định.
+
+### Đối chiếu Expanded khi không dùng `status`
+
+```{r status-ablation-oof}
+no_status_formula <- stats::reformulate(
+  setdiff(model_predictors_expanded, "status"), response = "churn_binary"
+)
+no_status_oof <- rep(NA_real_, nrow(train_model_data))
+for (k in seq_len(n_folds)) {
+  fit_no_status <- stats::glm(no_status_formula,
+    data = train_model_data[fold_id != k, , drop = FALSE],
+    family = stats::binomial(), control = stats::glm.control(maxit = 100))
+  no_status_oof[fold_id == k] <- stats::predict(fit_no_status,
+    newdata = train_model_data[fold_id == k, , drop = FALSE], type = "response")
+}
+stopifnot(all(is.finite(no_status_oof)))
+status_ablation <- tibble::tibble(
+  Model = c("Expanded", "Expanded without status"),
+  `OOF Average Precision` = c(
+    average_precision(oof_predictions$churn_binary, oof_predictions$Expanded),
+    average_precision(oof_predictions$churn_binary, no_status_oof)),
+  `OOF Brier` = c(mean((oof_predictions$Expanded - oof_predictions$churn_binary)^2),
+                   mean((no_status_oof - oof_predictions$churn_binary)^2))
+)
+tab(status_ablation,
+    "Độ nhạy khi bỏ status — chỉ đánh giá OOF trên train", digits = 3)
+```
+
+Trên OOF train, bỏ `status` làm AP thay đổi từ **`r num(status_ablation[["OOF Average Precision"]][1], 3)`** xuống **`r num(status_ablation[["OOF Average Precision"]][2], 3)`**. Test không tham gia phép so sánh này.
+
+
+## Xác suất dự báo và ma trận nhầm lẫn trên test
+
+```{r test-probabilities}
+model_fits <- list(
+  Full = logistic_full,
+  Reduced = logistic_reduced,
+  Expanded = logistic_expanded
+)
+stopifnot(all(vapply(model_fits, function(fit) isTRUE(fit$converged), logical(1))))
+model_test_probabilities <- lapply(model_fits, function(fit) {
+  prob <- stats::predict(fit, newdata = test_model_data, type = "response")
+  stopifnot(all(is.finite(prob)), all(prob >= 0 & prob <= 1))
+  prob
+})
+
+comparison_table <- purrr::imap_dfr(model_test_probabilities,
+  function(probability, name) {
+    classification_metrics(test_model_data$churn_binary, probability,
+                           model_thresholds[[name]], name)
+  }) |>
+  dplyr::mutate(aic_train = vapply(model_fits, AIC, numeric(1)))
+
+selected_result <- comparison_table |>
+  dplyr::filter(model == selected_model)
+```
+
+```{r confusion-matrices, results='asis', echo=FALSE}
+# Gộp ba ma trận vào MỘT khối HTML; không chèn mã R giữa các thẻ div.
+cm_cards <- vapply(names(model_test_probabilities), function(name) {
+  pred <- as.integer(model_test_probabilities[[name]] >= model_thresholds[[name]])
+  cm <- table(
+    Predicted = factor(pred, levels = c(0, 1)),
+    Actual = factor(test_model_data$churn_binary, levels = c(0, 1))
+  )
+  sprintf(paste0(
+    '<div class="cm-card"><h4>%s Logistic</h4>',
+    '<div class="cm-threshold">OOF Youden threshold: <b>%s</b></div>',
+    '<table><thead><tr><th>Predicted / Actual</th><th>No churn</th><th>Churn</th></tr></thead>',
+    '<tbody><tr><td>No churn</td><td class="cm-correct">%d</td>',
+    '<td class="cm-error">%d</td></tr><tr><td>Churn</td>',
+    '<td class="cm-error">%d</td><td class="cm-correct">%d</td>',
+    '</tr></tbody></table></div>'
+  ), name, num(model_thresholds[[name]], 3),
+  cm['0', '0'], cm['0', '1'], cm['1', '0'], cm['1', '1'])
+}, character(1))
+cat('<div class="cm-gallery"><div class="cm-grid">',
+    paste(cm_cards, collapse = ''), '</div></div>\n', sep = '')
+```
+**Hàng là dự đoán, cột là thực tế.** Ô Churn–Churn là dự báo đúng; Churn–No churn là cảnh báo sai.
+
+## So sánh chỉ số dự báo trên test
+
+```{r model-comparison, results='asis'}
+test_metric_order <- c(
+  "AIC (train)" = "aic_train", "Threshold" = "threshold",
+  "Accuracy" = "accuracy", "Sensitivity" = "sensitivity",
+  "Specificity" = "specificity", "Precision" = "precision",
+  "F1" = "f1", "Balanced Accuracy" = "balanced_accuracy",
+  "ROC-AUC" = "auc", "Average Precision" = "average_precision",
+  "Brier Score" = "brier", "True Negatives (TN)" = "tn",
+  "False Positives (FP)" = "fp", "False Negatives (FN)" = "fn",
+  "True Positives (TP)" = "tp"
+)
+test_metrics_vertical <- transpose_model_metrics(comparison_table, test_metric_order)
+render_analysis(test_metrics_vertical,
+  "Held-out Test — Fixed OOF Thresholds and Predictive Metrics",
+  paste0("<strong>Nhận xét</strong><ul>",
+    "<li><b>", selected_model, "</b> được chọn từ OOF train. Trên test, ROC-AUC = <b>",
+    num(selected_result$auc, 3), "</b>, AP = <b>",
+    num(selected_result$average_precision, 3), "</b>.</li>",
+    "<li>Ta phát hiện <b>", selected_result$tp, " churn</b>, bỏ sót <b>",
+    selected_result$fn, "</b> và cảnh báo sai <b>", selected_result$fp, "</b>.</li>",
+    "</ul>"), metrics = TRUE)
+```
+*AIC thuộc train; các chỉ số còn lại thuộc test. ROC-AUC và AP không phụ thuộc ngưỡng.*
+
+## Đối chiếu ngưỡng 0,50 và Youden
+
+```{r threshold-comparison, results='asis'}
+selected_prob <- model_test_probabilities[[selected_model]]
+threshold_comparison <- dplyr::bind_rows(
+  classification_metrics(test_model_data$churn_binary, selected_prob, 0.50,
+    paste0(selected_model, " — 0.50")),
+  classification_metrics(test_model_data$churn_binary, selected_prob,
+    selected_threshold, paste0(selected_model, " — OOF Youden"))
+)
+threshold_metric_order <- test_metric_order[names(test_metric_order) != "AIC (train)"]
+threshold_metrics_vertical <- transpose_model_metrics(threshold_comparison,
+                                                     threshold_metric_order)
+render_analysis(threshold_metrics_vertical,
+  "Selected Model on Test — 0.50 vs OOF Youden",
+  paste0("<b>Ngưỡng 0,50:</b> ", threshold_comparison$tp[1], " churn đúng, ",
+         threshold_comparison$fp[1], " cảnh báo sai. <b>Youden ",
+         num(selected_threshold, 3), ":</b> ", threshold_comparison$tp[2],
+         " churn đúng, ", threshold_comparison$fp[2], " cảnh báo sai."),
+  metrics = TRUE)
+```
+Đổi từ ngưỡng 0,50 sang Youden giúp phát hiện thêm **`r threshold_comparison$tp[2] - threshold_comparison$tp[1]` churn**, đồng thời tăng **`r threshold_comparison$fp[2] - threshold_comparison$fp[1]` cảnh báo sai**. Ngưỡng này chưa xét chi phí liên hệ.
+
+## Đường cong ROC
+
+```{r roc-curves, fig.width=9, fig.height=9, out.width="90%"}
+roc_results <- lapply(model_test_probabilities, function(prob) {
+  pROC::roc(test_model_data$churn_binary, prob,
+            levels = c(0, 1), direction = "<", quiet = TRUE)
+})
+roc_plot_data <- purrr::imap_dfr(roc_results, function(obj, name) {
+  tibble::tibble(
+    FPR = 1 - obj$specificities,
+    TPR = obj$sensitivities,
+    Model = name
+  )
+})
+roc_points <- purrr::imap_dfr(model_test_probabilities, function(prob, name) {
+  # Ngưỡng OOF không nhất thiết trùng một mốc ROC của tập test.
+  # Tính TPR/FPR trực tiếp để điểm trên biểu đồ luôn khớp confusion matrix.
+  pred <- prob >= model_thresholds[[name]]
+  actual <- test_model_data$churn_binary
+  tibble::tibble(
+    FPR = mean(pred[actual == 0]),
+    TPR = mean(pred[actual == 1]),
+    Model = name
+  )
+})
+model_line_colors <- c(
+  Full = chart_colors$blue,
+  Reduced = chart_colors$teal,
+  Expanded = chart_colors$coral
+)
+
+ggplot2::ggplot(
+  roc_plot_data,
+  ggplot2::aes(x = FPR, y = TPR, colour = Model)
+) +
+  ggplot2::geom_abline(slope = 1, intercept = 0,
+                       linetype = "dashed", colour = chart_colors$gray) +
+  ggplot2::geom_path(linewidth = 1.05) +
+  ggplot2::geom_point(data = roc_points, size = 2.4) +
+  ggplot2::scale_color_manual(values = model_line_colors) +
+  ggplot2::scale_x_continuous(limits = c(0, 1), breaks = seq(0, 1, by = 0.2)) +
+  ggplot2::scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, by = 0.2)) +
+  ggplot2::coord_fixed(ratio = 1, expand = FALSE) +
+  ggplot2::labs(
+    title = "ROC Curves — Held-out Test",
+    subtitle = "Điểm đánh dấu: ngưỡng Youden chọn trên OOF train",
+    x = "False Positive Rate (1 − Specificity)",
+    y = "True Positive Rate (Sensitivity)"
+  )
+```
+
+## Khoảng tin cậy trên test
+
+**CI 95%** cho Sensitivity và ROC-AUC thể hiện độ bất định trên tập test hiện tại, không phản ánh biến động theo thời gian.
+
+```{r test-metric-confidence-intervals, results='asis'}
+selected_roc <- roc_results[[selected_model]]
+selected_sensitivity_ci <- stats::binom.test(
+  selected_result$tp, selected_result$tp + selected_result$fn,
+  conf.level = 0.95
+)$conf.int
+selected_auc_ci <- as.numeric(pROC::ci.auc(
+  selected_roc, conf.level = 0.95, method = "delong"
+))
+
+metric_ci_table <- tibble::tibble(
+  Metric = c("Sensitivity", "ROC-AUC"),
+  Estimate = c(selected_result$sensitivity, selected_result$auc),
+  `95% CI lower` = c(selected_sensitivity_ci[1], selected_auc_ci[1]),
+  `95% CI upper` = c(selected_sensitivity_ci[2], selected_auc_ci[3])
+)
+compact_table_with_note(metric_ci_table,
+  paste0("95% Confidence Intervals on Test — ", selected_model),
+  paste0("<strong>Nhận xét</strong><ul>",
+    "<li>Sensitivity của mô hình được chọn: <b>",
+    num(selected_result$sensitivity, 3), "</b>; 95% CI [",
+    num(selected_sensitivity_ci[1], 3), "; ",
+    num(selected_sensitivity_ci[2], 3), "].</li>",
+    "<li>ROC-AUC: <b>", num(selected_result$auc, 3),
+    "</b>; 95% CI [", num(selected_auc_ci[1], 3), "; ",
+    num(selected_auc_ci[3], 3), "].</li></ul>"), digits = 3)
+```
+
+## Đường cong Precision–Recall
+
+```{r precision-recall-curves, fig.width=9, fig.height=9, out.width="90%"}
+make_pr_curve <- function(actual, prob, name) {
+  ord <- order(prob, decreasing = TRUE)
+  y <- as.integer(actual[ord] == 1)
+  score <- prob[ord]
+  end_idx <- which(!duplicated(score, fromLast = TRUE))
+  tibble::tibble(
+    Recall = c(0, cumsum(y)[end_idx] / sum(y)),
+    Precision = c(1, cumsum(y)[end_idx] / end_idx),
+    Model = name
+  )
+}
+pr_plot_data <- purrr::imap_dfr(model_test_probabilities,
+  ~ make_pr_curve(test_model_data$churn_binary, .x, .y))
+
+ggplot2::ggplot(pr_plot_data,
+  ggplot2::aes(Recall, Precision, colour = Model)) +
+  ggplot2::geom_step(direction = "vh", linewidth = 0.9) +
+  ggplot2::geom_hline(
+    yintercept = mean(test_model_data$churn_binary),
+    linetype = "dashed", colour = chart_colors$gray
+  ) +
+  ggplot2::scale_color_manual(values = model_line_colors) +
+  ggplot2::scale_x_continuous(limits = c(0, 1), breaks = seq(0, 1, by = 0.2)) +
+  ggplot2::scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, by = 0.2)) +
+  ggplot2::coord_fixed(ratio = 1, expand = FALSE) +
+  ggplot2::labs(
+    title = "Precision–Recall Curves — Held-out Test",
+    subtitle = "Đường gạch: tỷ lệ churn trong tập test",
+    x = "Recall", y = "Precision"
+  )
+```
+
+## Hiệu chỉnh xác suất (Calibration)
+
+Đối với **`r selected_model`**, ta đối chiếu xác suất dự báo và tỷ lệ churn thực tế theo từng khoảng **0,1** trên OOF train và test. Không dùng test để hiệu chỉnh mô hình.
+
+```{r calibration-check, fig.width=8, fig.height=6.4, out.width="83%"}
+calibration_bins <- function(actual, predicted, sample_name) {
+  stopifnot(length(actual) == length(predicted), all(is.finite(predicted)))
+  cut_id <- pmin(10L, pmax(1L, floor(predicted * 10) + 1L))
+  tibble::tibble(actual = actual, predicted = predicted, bin = cut_id) |>
+    dplyr::group_by(bin) |>
+    dplyr::summarise(
+      Customers = dplyr::n(),
+      Predicted = mean(predicted),
+      Observed = mean(actual), .groups = "drop") |>
+    dplyr::mutate(Data = sample_name)
+}
+calibration_data <- dplyr::bind_rows(
+  calibration_bins(oof_predictions$churn_binary,
+    oof_predictions[[selected_model]], "OOF train"),
+  calibration_bins(test_model_data$churn_binary,
+    model_test_probabilities[[selected_model]], "Test")
+)
+ggplot2::ggplot(calibration_data,
+  ggplot2::aes(Predicted, Observed, colour = Data)) +
+  ggplot2::geom_abline(slope = 1, intercept = 0, colour = chart_colors$gray,
+                       linetype = "dashed") +
+  ggplot2::geom_line(ggplot2::aes(group = Data), linewidth = .85) +
+  ggplot2::geom_point(ggplot2::aes(size = Customers)) +
+  ggplot2::scale_colour_manual(values = c(
+    "OOF train" = chart_colors$blue, "Test" = chart_colors$coral)) +
+  ggplot2::coord_equal(xlim = c(0, 1), ylim = c(0, 1), expand = FALSE) +
+  ggplot2::labs(title = paste0("Calibration — ", selected_model, " Logistic"),
+    subtitle = "Mỗi điểm là một khoảng xác suất rộng 0,1; điểm lớn có nhiều KH hơn",
+    x = "Xác suất dự báo trung bình", y = "Tỷ lệ churn thực tế") +
+  ggplot2::theme(legend.position = "bottom")
+```
+
+**Brier Score test: `r num(selected_result$brier, 3)`.** Điểm càng xa đường chéo càng cho thấy xác suất dự báo lệch tỷ lệ churn thực tế; nhóm ít khách có thể dao động mạnh.
+
+## Ưu tiên liên hệ Top-K (Recall & Lift)
+
+Với **`r usage_selected_model`** đã chọn trên train, ta xếp khách test theo nguy cơ churn và xem **top 10%, 20%, 30%** bao phủ bao nhiêu trường hợp.
+
+```{r top-k-evaluation, results='asis'}
+calculate_top_k <- function(actual, probability, fractions = c(.10, .20, .30)) {
+  stopifnot(length(actual) == length(probability), all(is.finite(probability)),
+            all(actual %in% c(0L, 1L)), sum(actual) > 0L)
+  n <- length(actual)
+  total_churn <- sum(actual)
+  # Phá hòa xác suất ngẫu nhiên với seed cố định, không dùng nhãn.
+  # Tránh lệch do thứ tự hàng trong CSV có thể liên quan đến churn.
+  set.seed(analysis_seed)
+  order_id <- order(-probability, stats::runif(n))
+  purrr::map_dfr(fractions, function(frac) {
+    k <- max(1L, ceiling(frac * n))
+    found <- sum(actual[order_id[seq_len(k)]])
+    baseline <- k * total_churn / n
+    tibble::tibble(
+      `Target (%)` = frac,
+      `Customers contacted` = k,
+      `Churn found` = found,
+      `Recall@K` = found / total_churn,
+      `Precision@K` = found / k,
+      `Random expected` = baseline,
+      `Lift@K` = (found / k) / (total_churn / n)
+    )
+  })
+}
+usage_test_prob <- model_test_probabilities[[usage_selected_model]]
+top_k_result <- calculate_top_k(test_model_data$churn_binary, usage_test_prob)
+top20 <- dplyr::filter(top_k_result, abs(`Target (%)` - .20) < 1e-9)
+top_k_view <- top_k_result |>
+  dplyr::mutate(
+    `Target (%)` = scales::percent(`Target (%)`, accuracy = 1),
+    `Customers contacted` = as.character(`Customers contacted`),
+    `Churn found` = as.character(`Churn found`),
+    `Recall@K` = scales::percent(`Recall@K`, accuracy = .1),
+    `Precision@K` = scales::percent(`Precision@K`, accuracy = .1),
+    `Random expected` = num(`Random expected`, 1),
+    `Lift@K` = num(`Lift@K`, 2))
+cat(as.character(tab(top_k_view,
+  paste0("Top-K trên tập test — ", usage_selected_model, " Logistic"), digits = 1)))
+```
+
+**Top 20%:** trong **`r top20[["Customers contacted"]]` khách** có **`r top20[["Churn found"]]` / `r sum(test_model_data$churn_binary)` churn** (Recall **`r scales::percent(top20[["Recall@K"]], accuracy=.1)`**), cao gấp **`r num(top20[["Lift@K"]], 2)` lần** kỳ vọng chọn ngẫu nhiên cùng số khách.
+
+*K làm tròn lên; nếu bằng điểm, thứ tự được xác định bằng seed `r analysis_seed`. Lift@K là tỷ số giữa Precision@K và tỷ lệ churn chung.*
+
+
+# Hàm ý kinh doanh
+
+## Ưu tiên khách hàng nào?
+
+Nếu chỉ liên hệ **20% khách có điểm cao nhất** theo **`r usage_selected_model`**, ta tiếp cận nhóm chứa **`r top20[["Churn found"]]` / `r sum(test_model_data$churn_binary)` trường hợp churn** trên test. Đây là khả năng **tìm đúng người**, chưa phải hiệu quả giữ chân.
+
+## Các nhóm cần khảo sát nguyên nhân
+
+- **Khiếu nại:** churn **`r scales::percent(segment_churn_rate("complains", "Complaint"), accuracy=.01)`**, so với **`r scales::percent(segment_churn_rate("complains", "No complaint"), accuracy=.01)`** ở nhóm không khiếu nại. Cần biết thêm nội dung và thời gian xử lý khiếu nại.
+- **Gói cước:** Plan 1 churn **`r scales::percent(plan_a_rate, accuracy=.01)`**, Plan 2 **`r scales::percent(plan_b_rate, accuracy=.01)`**. Chênh lệch này chưa đủ để khuyên đổi gói.
+- **Trạng thái thuê bao:** `status` có liên hệ mạnh với churn nhưng chưa rõ thời điểm ghi nhận.
+
+## Đo lường khi triển khai thử
+
+Một thử nghiệm có nhóm đối chứng cần ghi lại **số khách được liên hệ, chi phí, phản hồi và tỷ lệ churn**. Từ đó mới biết liên hệ có thực sự giúp giảm churn hay không.
+
+```{r executive-summary-build, include=FALSE}
+# Tóm tắt được chèn vào đầu báo cáo bởi document hook sau khi mọi kết quả đã có.
+# Không dùng thông tin test để chọn mô hình/ngưỡng.
+executive_summary_html <- paste0(
+  '<p><b>Sau loại trùng:</b> ', scales::comma(nrow(data)),
+  ' hồ sơ; <b>', sum(data$churn == 'Churn'), ' churn</b> (',
+  scales::percent(mean(data$churn == 'Churn'), accuracy = .01), ').</p>',
+  '<ul><li><b>Khiếu nại:</b> churn ',
+  scales::percent(segment_churn_rate('complains','Complaint'), accuracy=.01),
+  ', so với ',
+  scales::percent(segment_churn_rate('complains','No complaint'), accuracy=.01),
+  ' ở nhóm không khiếu nại (chênh ',
+  num(100 * observed_complaint_difference,2), ' điểm phần trăm).</li>',
+  '<li><b>Giá trị và tần suất sử dụng:</b> trung vị <code>customer_value</code> ',
+  if (bootstrap_value$observed_difference < 0) 'thấp hơn ' else 'cao hơn ',
+  num(abs(bootstrap_value$observed_difference),2),
+  '; tần suất sử dụng trung bình ',
+  if (permutation_usage$observed_difference < 0) 'thấp hơn ' else 'cao hơn ',
+  num(abs(permutation_usage$observed_difference),2), ' lượt ở nhóm churn.</li>',
+  '<li><b>Dự báo:</b> ', selected_model,
+  ' có AP OOF cao nhất (', num(cv_ranked$average_precision[1],3),
+  '); trên test đạt AP ', num(selected_result$average_precision,3),
+  ' và ROC-AUC ', num(selected_result$auc,3), '.</li>',
+  '<li><b>Liên hệ 20% khách điểm cao nhất:</b> với ', usage_selected_model,
+  ', tìm thấy ', top20[["Churn found"]], '/', sum(test_model_data$churn_binary),
+  ' churn trên test; Lift ', num(top20[["Lift@K"]],2), ' lần.</li></ul>',
+  '<p><em>Chưa xác minh được thời điểm cập nhật <code>status</code>, ',
+  'nên không xem Expanded là mô hình sẵn sàng triển khai.</em></p>'
+)
+```
+
+# Kết luận và giới hạn
+
+Sau loại trùng, tỷ lệ churn là **`r scales::percent(mean(data$churn == "Churn"), accuracy=.01)`**. Nhóm có khiếu nại có tỷ lệ churn cao hơn **`r num(100 * observed_complaint_difference, 2)` điểm phần trăm**; nhóm churn có trung vị `customer_value` thấp hơn **`r num(abs(bootstrap_value$observed_difference), 2)`** và trung bình `frequency_of_use` thấp hơn **`r num(abs(permutation_usage$observed_difference), 2)` lượt**.
+
+**`r selected_model`** dẫn đầu trên OOF train (AP **`r num(cv_ranked$average_precision[1],3)`**), đạt AP **`r num(selected_result$average_precision,3)`** trên test. Với phương án không dùng `status` (**`r usage_selected_model`**), chỉ cần xét **top 20%** khách điểm cao nhất đã tìm thấy **`r top20[["Churn found"]]` / `r sum(test_model_data$churn_binary)` churn**.
+
+**Giới hạn cần nhớ:**
+
+- Không có **mã khách hàng** và **thời điểm ghi nhận từng hồ sơ**: chưa thể đánh giá theo thời gian hoặc xác minh dòng trùng.
+- Expanded được xác định sau EDA toàn mẫu; `status` cũng chưa rõ thời điểm cập nhật. **Kết quả test của Expanded chỉ tham khảo**.
+- Mô hình và ngưỡng cùng được chọn bằng OOF; kết quả CV có thể lạc quan. P-value của Reduced chưa tính đến bước chọn biến.
+- **Dự báo churn không đồng nghĩa giảm churn**: cần thử nghiệm có đối chứng mới đo được hiệu quả giữ chân.
+
+# Phụ lục và khả năng tái lập
+
+## Dữ liệu và quyết định xử lý
+
+- **Dữ liệu:** `Customer Churn.csv` trong `data/` hoặc `../data/`. Có `r sum(is.na(raw_data))` ô thiếu; loại `r duplicate_count` dòng trùng, giữ `r nrow(data)` hồ sơ.
+- **Bootstrap:** 5.000 mẫu theo nhóm, CI percentile 95%. **Permutation:** 10.000 lần, hai phía; điều chỉnh Holm. Gói cước có thêm kiểm định Fisher.
+- **Mô hình:** chia phân tầng 80/20; 5-fold CV; AIC chọn biến trong từng fold; ngưỡng từ OOF train; seed `r analysis_seed`.
+- **Top-K:** làm tròn K lên; phá hòa điểm bằng seed `r analysis_seed` (không dùng nhãn).
+
+## Môi trường R và phiên bản gói
+
+```{r session-info}
+package_versions <- data.frame(
+  Package = required_packages,
+  Version = vapply(required_packages, function(p) {
+    as.character(utils::packageVersion(p))
+  }, character(1)),
+  check.names = FALSE
+)
+tab(package_versions, "Phiên bản các gói sử dụng trong bản phân tích", digits = 0)
+utils::sessionInfo()
+```
+
+## Tài liệu tham khảo
+
+- UCI Machine Learning Repository (2020). *Iranian Churn*. DOI: [10.24432/C5JW3Z](https://doi.org/10.24432/C5JW3Z). Giấy phép dữ liệu: CC BY 4.0.

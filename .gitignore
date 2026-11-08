@@ -1,0 +1,12 @@
+.Rhistory
+.RData
+.Ruserdata
+.Rproj.user/
+.Rcheck/
+*.Rproj
+*.html.md
+*.utf8.md
+Customer_Churn_files/
+figures/
+.DS_Store
+Thumbs.db
